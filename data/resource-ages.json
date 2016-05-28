@@ -1,0 +1,449 @@
+[
+  {
+    "country": "AU",
+    "id": "au-year3-5",
+    "description": "3-5",
+    "mapTo": [
+      "age3",
+      "age4",
+      "age5"
+    ],
+    "legacyId": "1",
+    "displayOrder": 1,
+    "phase": "Early Years"
+  },
+  {
+    "country": "AU",
+    "id": "au-year5-7",
+    "description": "5-7",
+    "mapTo": [
+      "age5",
+      "age6",
+      "age7"
+    ],
+    "legacyId": "2",
+    "displayOrder": 2,
+    "phase": "Primary"
+  },
+  {
+    "country": "AU",
+    "id": "au-year7-11",
+    "description": "7-11",
+    "mapTo": [
+      "age7",
+      "age8",
+      "age9",
+      "age10",
+      "age11"
+    ],
+    "legacyId": "3",
+    "displayOrder": 3,
+    "phase": "Primary"
+  },
+  {
+    "country": "AU",
+    "id": "au-year11-14",
+    "description": "11-14",
+    "mapTo": [
+      "age11",
+      "age12",
+      "age13",
+      "age14"
+    ],
+    "legacyId": "4",
+    "displayOrder": 4,
+    "phase": "Secondary"
+  },
+  {
+    "country": "AU",
+    "id": "au-year14-16",
+    "description": "14-16",
+    "mapTo": [
+      "age14",
+      "age15",
+      "age16"
+    ],
+    "legacyId": "5",
+    "displayOrder": 5,
+    "phase": "Secondary"
+  },
+  {
+    "country": "AU",
+    "id": "au-year16+",
+    "description": "16+",
+    "mapTo": [
+      "age16",
+      "age17",
+      "age18"
+    ],
+    "legacyId": "6",
+    "displayOrder": 6,
+    "phase": "Secondary"
+  },
+  {
+    "country": "GB",
+    "id": "year3-5",
+    "description": "3-5",
+    "mapTo": [
+      "age3",
+      "age4",
+      "age5"
+    ],
+    "legacyId": "1",
+    "displayOrder": 1,
+    "phase": "Early Years"
+  },
+  {
+    "country": "GB",
+    "id": "year5-7",
+    "description": "5-7",
+    "mapTo": [
+      "age5",
+      "age6",
+      "age7"
+    ],
+    "legacyId": "2",
+    "displayOrder": 2,
+    "phase": "Primary"
+  },
+  {
+    "country": "GB",
+    "id": "year7-11",
+    "description": "7-11",
+    "mapTo": [
+      "age7",
+      "age8",
+      "age9",
+      "age10",
+      "age11"
+    ],
+    "legacyId": "3",
+    "displayOrder": 3,
+    "phase": "Primary"
+  },
+  {
+    "country": "GB",
+    "id": "year11-14",
+    "description": "11-14",
+    "mapTo": [
+      "age11",
+      "age12",
+      "age13",
+      "age14"
+    ],
+    "legacyId": "4",
+    "displayOrder": 4,
+    "phase": "Secondary"
+  },
+  {
+    "country": "GB",
+    "id": "year14-16",
+    "description": "14-16",
+    "mapTo": [
+      "age14",
+      "age15",
+      "age16"
+    ],
+    "legacyId": "5",
+    "displayOrder": 5,
+    "phase": "Secondary"
+  },
+  {
+    "country": "GB",
+    "id": "year16+",
+    "description": "16+",
+    "mapTo": [
+      "age16",
+      "age17",
+      "age18"
+    ],
+    "legacyId": "6",
+    "displayOrder": 6,
+    "phase": "Secondary"
+  },
+  {
+    "country": "US",
+    "id": "preK",
+    "description": "Pre-K",
+    "mapTo": [
+      "age1",
+      "age2",
+      "age3",
+      "age4",
+      "age5"
+    ],
+    "legacyId": "16",
+    "displayOrder": 1,
+    "phase": "Preschool"
+  },
+  {
+    "country": "US",
+    "id": "kindergarten",
+    "description": "Kindergarten",
+    "mapTo": [
+      "age5",
+      "age6"
+    ],
+    "legacyId": "17",
+    "displayOrder": 2,
+    "phase": "Kindergarten"
+  },
+  {
+    "country": "US",
+    "id": "grade1",
+    "description": "1st",
+    "mapTo": [
+      "age6",
+      "age7"
+    ],
+    "legacyId": "18",
+    "displayOrder": 3,
+    "phase": "Elementary School"
+  },
+  {
+    "country": "US",
+    "id": "grade2",
+    "description": "2nd",
+    "mapTo": [
+      "age7",
+      "age8"
+    ],
+    "legacyId": "19",
+    "displayOrder": 4,
+    "phase": "Elementary School"
+  },
+  {
+    "country": "US",
+    "id": "grade3",
+    "description": "3rd",
+    "mapTo": [
+      "age8",
+      "age9"
+    ],
+    "legacyId": "20",
+    "displayOrder": 5,
+    "phase": "Elementary School"
+  },
+  {
+    "country": "US",
+    "id": "grade4",
+    "description": "4th",
+    "mapTo": [
+      "age9",
+      "age10"
+    ],
+    "legacyId": "21",
+    "displayOrder": 6,
+    "phase": "Elementary School"
+  },
+  {
+    "country": "US",
+    "id": "grade5",
+    "description": "5th",
+    "mapTo": [
+      "age10",
+      "age11"
+    ],
+    "legacyId": "22",
+    "displayOrder": 7,
+    "phase": "Elementary School"
+  },
+  {
+    "country": "US",
+    "id": "grade6",
+    "description": "6th",
+    "legacyId": "23",
+    "mapTo": [
+      "age11",
+      "age12"
+    ],
+    "displayOrder": 8,
+    "phase": "Middle School"
+  },
+  {
+    "country": "US",
+    "id": "grade7",
+    "description": "7th",
+    "mapTo": [
+      "age12",
+      "age13"
+    ],
+    "legacyId": "24",
+    "displayOrder": 9,
+    "phase": "Middle School"
+  },
+  {
+    "country": "US",
+    "id": "grade8",
+    "description": "8th",
+    "legacyId": "25",
+    "mapTo": [
+      "age13",
+      "age14"
+    ],
+    "displayOrder": 10,
+    "phase": "Middle School"
+  },
+  {
+    "country": "US",
+    "id": "grade9",
+    "description": "9th",
+    "legacyId": "26",
+    "mapTo": [
+      "age14",
+      "age15"
+    ],
+    "displayOrder": 11,
+    "phase": "High School"
+  },
+  {
+    "country": "US",
+    "id": "grade10",
+    "description": "10th",
+    "legacyId": "27",
+    "mapTo": [
+      "age15",
+      "age16"
+    ],
+    "displayOrder": 12,
+    "phase": "High School"
+  },
+  {
+    "country": "US",
+    "id": "grade11",
+    "description": "11th",
+    "legacyId": "28",
+    "mapTo": [
+      "age16",
+      "age17"
+    ],
+    "displayOrder": 13,
+    "phase": "High School"
+  },
+  {
+    "country": "US",
+    "id": "grade12",
+    "description": "12th",
+    "legacyId": "29",
+    "mapTo": [
+      "age17",
+      "age18"
+    ],
+    "displayOrder": 14,
+    "phase": "High School"
+  },
+  {
+    "country": "Common",
+    "id": "age1",
+    "description": "Age 1",
+    "displayOrder": 1
+  },
+  {
+    "country": "Common",
+    "id": "age2",
+    "description": "Age 2",
+    "displayOrder": 2
+  },
+  {
+    "country": "Common",
+    "id": "age3",
+    "description": "Age 3",
+    "displayOrder": 3
+  },
+  {
+    "country": "Common",
+    "id": "age4",
+    "description": "Age 4",
+    "displayOrder": 4
+  },
+  {
+    "country": "Common",
+    "id": "age5",
+    "description": "Age 5",
+    "displayOrder": 5
+  },
+  {
+    "country": "Common",
+    "id": "age6",
+    "description": "Age 6",
+    "displayOrder": 6
+  },
+  {
+    "country": "Common",
+    "id": "age7",
+    "description": "Age 7",
+    "displayOrder": 7
+  },
+  {
+    "country": "Common",
+    "id": "age8",
+    "description": "Age 8",
+    "displayOrder": 8
+  },
+  {
+    "country": "Common",
+    "id": "age9",
+    "description": "Age 9",
+    "displayOrder": 9
+  },
+  {
+    "country": "Common",
+    "id": "age10",
+    "description": "Age 10",
+    "displayOrder": 10
+  },
+  {
+    "country": "Common",
+    "id": "age11",
+    "description": "Age 11",
+    "displayOrder": 11
+  },
+  {
+    "country": "Common",
+    "id": "age12",
+    "description": "Age 12",
+    "displayOrder": 12
+  },
+  {
+    "country": "Common",
+    "id": "age13",
+    "description": "Age 13",
+    "displayOrder": 13
+  },
+  {
+    "country": "Common",
+    "id": "age14",
+    "description": "Age 14",
+    "displayOrder": 14
+  },
+  {
+    "country": "Common",
+    "id": "age15",
+    "description": "Age 15",
+    "displayOrder": 15
+  },
+  {
+    "country": "Common",
+    "id": "age16",
+    "description": "Age 16",
+    "displayOrder": 16
+  },
+  {
+    "country": "Common",
+    "id": "age17",
+    "description": "Age 17",
+    "displayOrder": 17
+  },
+  {
+    "country": "Common",
+    "id": "age18",
+    "description": "Age 18",
+    "displayOrder": 18
+  },
+  {
+    "country": "Common",
+    "id": "age18post",
+    "description": "Post Age 18",
+    "displayOrder": 19
+  }
+]

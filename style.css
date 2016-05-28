@@ -1,0 +1,87 @@
+body {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: 100;
+  font-size:12px;
+}
+
+.term-item span,
+.term-list-header span,
+.term-list-subheader span {
+  display: inline-block;
+  box-sizing: border-box;
+  /*white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;*/
+  vertical-align: top;
+}
+.size-1 {
+  width: 20px;
+}
+.size-9 {
+  width: 180px;
+}
+.size-5 {
+  width: 100px;
+}
+.size-10 {
+  width: 200px;
+}
+.size-15 {
+  width: 300px;
+}
+
+.size-20 {
+  width: 400px;
+}
+.size-30 {
+  width: 600px;
+}
+
+.term-item {
+  min-height: 30px;
+  line-height: 30px;
+  vertical-align: bottom;
+  padding-right:13px;
+  border-bottom:1px solid whitesmoke;
+}
+
+.term-item .term-name {
+  font-size:14px;
+  margin-left:5px;
+}
+
+.mapping-group i {
+  font-size:20px;
+  margin-right: 5px;
+  color: cadetblue;
+  line-height: 30px;
+}
+
+.mapping-terms {
+  font-size:14px;
+}
+
+.mapped-term-name {
+  margin-right:5px;
+  border:1px solid silver;
+  padding-left:6px;
+  padding-right:6px;
+  border-radius: 3px;
+  margin-bottom:3px;
+  margin-top:3px;
+}
+
+.term-count {
+  float:right;
+  margin-left:8px;
+  font-size:12px;
+  background-color:whitesmoke;
+  color:gray;
+  height: 20px;
+  line-height:20px;
+  padding-left:5px;
+  padding-right:5px;
+  border-radius: 3px;
+  margin-top:8px;
+  margin-right:15px;
+}

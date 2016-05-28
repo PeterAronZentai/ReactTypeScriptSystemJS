@@ -1,0 +1,6 @@
+{
+  "globalDependencies": {
+    "react-router": "registry:dt/react-router#2.0.0+20160501155536",
+    "whatwg-fetch": "registry:dt/whatwg-fetch#0.0.0+20160524142046"
+  }
+}

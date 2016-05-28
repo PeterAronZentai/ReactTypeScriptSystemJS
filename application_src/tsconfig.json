@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "target":"es2015",
+    "module":"system",
+    "moduleResolution": "node",
+    "sourceMap": true
+  },
+  "exclude": [
+    "node_modules",
+    "typings",
+    "jspm_packages"
+  ]
+}

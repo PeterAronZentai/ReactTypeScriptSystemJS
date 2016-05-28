@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "target": "es2015",
+    "module": "commonjs",
+    "moduleResolution": "node"
+  },
+  "exclude": [
+    "node_modules",
+    "typings",
+    "jspm_packages"
+  ]
+}
