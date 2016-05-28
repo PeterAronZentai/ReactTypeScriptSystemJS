@@ -8,6 +8,8 @@ import { Taxonomy } from './entities/Taxonomy'
 import { Term } from './entities/Term'
 import { Router, Route, Link, hashHistory, IndexRoute, RouteComponentProps } from 'react-router'
 
+
+
 export class NavLink extends Component<any, any> {
   render() {
     return <Link {...this.props} activeClassName="active"/>
@@ -132,7 +134,3 @@ domRender((
     </Route>
   </Router>
 ), document.getElementById('container'))
-      //component={Application}
-      // <Route path="/GB" component={Subjects} />
-      // <Route path="/US" component={Subjects} />
-

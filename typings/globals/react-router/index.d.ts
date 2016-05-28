@@ -4,6 +4,8 @@ declare namespace ReactRouter {
 
     import React = __React
 
+    type HistoryModule = {}
+
     import H = HistoryModule
 
     // types based on https://github.com/rackt/react-router/blob/master/docs/Glossary.md
@@ -13,7 +15,7 @@ declare namespace ReactRouter {
     type EnterHook = (nextState: RouterState, replace: RedirectFunction, callback?: Function) => void
 
     type LeaveHook = () => void
-    
+
     type ChangeHook = (prevState: RouterState, nextState: RouterState, replace: RedirectFunction, callback: Function) => void;
 
     type Params = { [param: string]: string }

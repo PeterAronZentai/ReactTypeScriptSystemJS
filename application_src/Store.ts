@@ -109,7 +109,7 @@ export class TaxonomyStore extends Store<Taxonomy> {
     if (!term.usageCountLoaded) {
       term.usageCountLoaded = true;
       var searchHost = 'http://service-resource-search.service.live.tescloud.com/api/search/v4/term-counts'
-      var query = `${this.mapTermName(this.taxonomy.name)[0]}-ids=${encodeURIComponent(term.id)}&displayCountry=${term.country}`
+      var query = `${this.mapTermName(this.taxonomy.name)[0]}-ids=${encodeURIComponent(term.id.toString())}&displayCountry=${term.country}`
       var response = await fetch(`${searchHost}?${query}`)
       var data = await response.json()
       term.usageCount = (data.response[this.mapTermName(this.taxonomy.name)[1]][0] || {}).count
