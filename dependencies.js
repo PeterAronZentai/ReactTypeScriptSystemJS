@@ -1,3 +1,251 @@
+System.registerDynamic("npm:events@1.0.2/events.js", [], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  function EventEmitter() {
+    this._events = this._events || {};
+    this._maxListeners = this._maxListeners || undefined;
+  }
+  module.exports = EventEmitter;
+  EventEmitter.EventEmitter = EventEmitter;
+  EventEmitter.prototype._events = undefined;
+  EventEmitter.prototype._maxListeners = undefined;
+  EventEmitter.defaultMaxListeners = 10;
+  EventEmitter.prototype.setMaxListeners = function(n) {
+    if (!isNumber(n) || n < 0 || isNaN(n))
+      throw TypeError('n must be a positive number');
+    this._maxListeners = n;
+    return this;
+  };
+  EventEmitter.prototype.emit = function(type) {
+    var er,
+        handler,
+        len,
+        args,
+        i,
+        listeners;
+    if (!this._events)
+      this._events = {};
+    if (type === 'error') {
+      if (!this._events.error || (isObject(this._events.error) && !this._events.error.length)) {
+        er = arguments[1];
+        if (er instanceof Error) {
+          throw er;
+        }
+        throw TypeError('Uncaught, unspecified "error" event.');
+      }
+    }
+    handler = this._events[type];
+    if (isUndefined(handler))
+      return false;
+    if (isFunction(handler)) {
+      switch (arguments.length) {
+        case 1:
+          handler.call(this);
+          break;
+        case 2:
+          handler.call(this, arguments[1]);
+          break;
+        case 3:
+          handler.call(this, arguments[1], arguments[2]);
+          break;
+        default:
+          len = arguments.length;
+          args = new Array(len - 1);
+          for (i = 1; i < len; i++)
+            args[i - 1] = arguments[i];
+          handler.apply(this, args);
+      }
+    } else if (isObject(handler)) {
+      len = arguments.length;
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      listeners = handler.slice();
+      len = listeners.length;
+      for (i = 0; i < len; i++)
+        listeners[i].apply(this, args);
+    }
+    return true;
+  };
+  EventEmitter.prototype.addListener = function(type, listener) {
+    var m;
+    if (!isFunction(listener))
+      throw TypeError('listener must be a function');
+    if (!this._events)
+      this._events = {};
+    if (this._events.newListener)
+      this.emit('newListener', type, isFunction(listener.listener) ? listener.listener : listener);
+    if (!this._events[type])
+      this._events[type] = listener;
+    else if (isObject(this._events[type]))
+      this._events[type].push(listener);
+    else
+      this._events[type] = [this._events[type], listener];
+    if (isObject(this._events[type]) && !this._events[type].warned) {
+      var m;
+      if (!isUndefined(this._maxListeners)) {
+        m = this._maxListeners;
+      } else {
+        m = EventEmitter.defaultMaxListeners;
+      }
+      if (m && m > 0 && this._events[type].length > m) {
+        this._events[type].warned = true;
+        console.error('(node) warning: possible EventEmitter memory ' + 'leak detected. %d listeners added. ' + 'Use emitter.setMaxListeners() to increase limit.', this._events[type].length);
+        if (typeof console.trace === 'function') {
+          console.trace();
+        }
+      }
+    }
+    return this;
+  };
+  EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+  EventEmitter.prototype.once = function(type, listener) {
+    if (!isFunction(listener))
+      throw TypeError('listener must be a function');
+    var fired = false;
+    function g() {
+      this.removeListener(type, g);
+      if (!fired) {
+        fired = true;
+        listener.apply(this, arguments);
+      }
+    }
+    g.listener = listener;
+    this.on(type, g);
+    return this;
+  };
+  EventEmitter.prototype.removeListener = function(type, listener) {
+    var list,
+        position,
+        length,
+        i;
+    if (!isFunction(listener))
+      throw TypeError('listener must be a function');
+    if (!this._events || !this._events[type])
+      return this;
+    list = this._events[type];
+    length = list.length;
+    position = -1;
+    if (list === listener || (isFunction(list.listener) && list.listener === listener)) {
+      delete this._events[type];
+      if (this._events.removeListener)
+        this.emit('removeListener', type, listener);
+    } else if (isObject(list)) {
+      for (i = length; i-- > 0; ) {
+        if (list[i] === listener || (list[i].listener && list[i].listener === listener)) {
+          position = i;
+          break;
+        }
+      }
+      if (position < 0)
+        return this;
+      if (list.length === 1) {
+        list.length = 0;
+        delete this._events[type];
+      } else {
+        list.splice(position, 1);
+      }
+      if (this._events.removeListener)
+        this.emit('removeListener', type, listener);
+    }
+    return this;
+  };
+  EventEmitter.prototype.removeAllListeners = function(type) {
+    var key,
+        listeners;
+    if (!this._events)
+      return this;
+    if (!this._events.removeListener) {
+      if (arguments.length === 0)
+        this._events = {};
+      else if (this._events[type])
+        delete this._events[type];
+      return this;
+    }
+    if (arguments.length === 0) {
+      for (key in this._events) {
+        if (key === 'removeListener')
+          continue;
+        this.removeAllListeners(key);
+      }
+      this.removeAllListeners('removeListener');
+      this._events = {};
+      return this;
+    }
+    listeners = this._events[type];
+    if (isFunction(listeners)) {
+      this.removeListener(type, listeners);
+    } else {
+      while (listeners.length)
+        this.removeListener(type, listeners[listeners.length - 1]);
+    }
+    delete this._events[type];
+    return this;
+  };
+  EventEmitter.prototype.listeners = function(type) {
+    var ret;
+    if (!this._events || !this._events[type])
+      ret = [];
+    else if (isFunction(this._events[type]))
+      ret = [this._events[type]];
+    else
+      ret = this._events[type].slice();
+    return ret;
+  };
+  EventEmitter.listenerCount = function(emitter, type) {
+    var ret;
+    if (!emitter._events || !emitter._events[type])
+      ret = 0;
+    else if (isFunction(emitter._events[type]))
+      ret = 1;
+    else
+      ret = emitter._events[type].length;
+    return ret;
+  };
+  function isFunction(arg) {
+    return typeof arg === 'function';
+  }
+  function isNumber(arg) {
+    return typeof arg === 'number';
+  }
+  function isObject(arg) {
+    return typeof arg === 'object' && arg !== null;
+  }
+  function isUndefined(arg) {
+    return arg === void 0;
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:events@1.0.2.js", ["npm:events@1.0.2/events.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:events@1.0.2/events.js');
+  return module.exports;
+});
+
+System.registerDynamic("github:jspm/nodelibs-events@0.1.1/index.js", ["events"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = System._nodeRequire ? System._nodeRequire('events') : $__require('events');
+  return module.exports;
+});
+
+System.registerDynamic("github:jspm/nodelibs-events@0.1.1.js", ["github:jspm/nodelibs-events@0.1.1/index"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('github:jspm/nodelibs-events@0.1.1/index');
+  return module.exports;
+});
+
 System.registerDynamic("npm:react@15.1.0/lib/FallbackCompositionState.js", ["object-assign", "./PooledClass", "./getTextContentAccessor"], true, function($__require, exports, module) {
   "use strict";
   ;
@@ -9712,6 +9960,2238 @@ System.registerDynamic("npm:react-dom@15.1.0.js", ["npm:react-dom@15.1.0/index.j
   return module.exports;
 });
 
+System.registerDynamic("npm:react-router@2.4.1/lib/Router.js", ["history/lib/createHashHistory", "history/lib/useQueries", "react", "./createTransitionManager", "./InternalPropTypes", "./RouterContext", "./RouteUtils", "./RouterUtils", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _createHashHistory = $__require('history/lib/createHashHistory');
+    var _createHashHistory2 = _interopRequireDefault(_createHashHistory);
+    var _useQueries = $__require('history/lib/useQueries');
+    var _useQueries2 = _interopRequireDefault(_useQueries);
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _createTransitionManager = $__require('./createTransitionManager');
+    var _createTransitionManager2 = _interopRequireDefault(_createTransitionManager);
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    var _RouterContext = $__require('./RouterContext');
+    var _RouterContext2 = _interopRequireDefault(_RouterContext);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _RouterUtils = $__require('./RouterUtils');
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function _objectWithoutProperties(obj, keys) {
+      var target = {};
+      for (var i in obj) {
+        if (keys.indexOf(i) >= 0)
+          continue;
+        if (!Object.prototype.hasOwnProperty.call(obj, i))
+          continue;
+        target[i] = obj[i];
+      }
+      return target;
+    }
+    function isDeprecatedHistory(history) {
+      return !history || !history.__v2_compatible__;
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var func = _React$PropTypes.func;
+    var object = _React$PropTypes.object;
+    var Router = _react2.default.createClass({
+      displayName: 'Router',
+      propTypes: {
+        history: object,
+        children: _InternalPropTypes.routes,
+        routes: _InternalPropTypes.routes,
+        render: func,
+        createElement: func,
+        onError: func,
+        onUpdate: func,
+        matchContext: object
+      },
+      getDefaultProps: function getDefaultProps() {
+        return {render: function render(props) {
+            return _react2.default.createElement(_RouterContext2.default, props);
+          }};
+      },
+      getInitialState: function getInitialState() {
+        return {
+          location: null,
+          routes: null,
+          params: null,
+          components: null
+        };
+      },
+      handleError: function handleError(error) {
+        if (this.props.onError) {
+          this.props.onError.call(this, error);
+        } else {
+          throw error;
+        }
+      },
+      componentWillMount: function componentWillMount() {
+        var _this = this;
+        var _props = this.props;
+        var parseQueryString = _props.parseQueryString;
+        var stringifyQuery = _props.stringifyQuery;
+        "production" !== 'production' ? (0, _routerWarning2.default)(!(parseQueryString || stringifyQuery), '`parseQueryString` and `stringifyQuery` are deprecated. Please create a custom history. http://tiny.cc/router-customquerystring') : void 0;
+        var _createRouterObjects = this.createRouterObjects();
+        var history = _createRouterObjects.history;
+        var transitionManager = _createRouterObjects.transitionManager;
+        var router = _createRouterObjects.router;
+        this._unlisten = transitionManager.listen(function(error, state) {
+          if (error) {
+            _this.handleError(error);
+          } else {
+            _this.setState(state, _this.props.onUpdate);
+          }
+        });
+        this.history = history;
+        this.router = router;
+      },
+      createRouterObjects: function createRouterObjects() {
+        var matchContext = this.props.matchContext;
+        if (matchContext) {
+          return matchContext;
+        }
+        var history = this.props.history;
+        var _props2 = this.props;
+        var routes = _props2.routes;
+        var children = _props2.children;
+        if (isDeprecatedHistory(history)) {
+          history = this.wrapDeprecatedHistory(history);
+        }
+        var transitionManager = (0, _createTransitionManager2.default)(history, (0, _RouteUtils.createRoutes)(routes || children));
+        var router = (0, _RouterUtils.createRouterObject)(history, transitionManager);
+        var routingHistory = (0, _RouterUtils.createRoutingHistory)(history, transitionManager);
+        return {
+          history: routingHistory,
+          transitionManager: transitionManager,
+          router: router
+        };
+      },
+      wrapDeprecatedHistory: function wrapDeprecatedHistory(history) {
+        var _props3 = this.props;
+        var parseQueryString = _props3.parseQueryString;
+        var stringifyQuery = _props3.stringifyQuery;
+        var createHistory = void 0;
+        if (history) {
+          "production" !== 'production' ? (0, _routerWarning2.default)(false, 'It appears you have provided a deprecated history object to `<Router/>`, please use a history provided by ' + 'React Router with `import { browserHistory } from \'react-router\'` or `import { hashHistory } from \'react-router\'`. ' + 'If you are using a custom history please create it with `useRouterHistory`, see http://tiny.cc/router-usinghistory for details.') : void 0;
+          createHistory = function createHistory() {
+            return history;
+          };
+        } else {
+          "production" !== 'production' ? (0, _routerWarning2.default)(false, '`Router` no longer defaults the history prop to hash history. Please use the `hashHistory` singleton instead. http://tiny.cc/router-defaulthistory') : void 0;
+          createHistory = _createHashHistory2.default;
+        }
+        return (0, _useQueries2.default)(createHistory)({
+          parseQueryString: parseQueryString,
+          stringifyQuery: stringifyQuery
+        });
+      },
+      componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
+        "production" !== 'production' ? (0, _routerWarning2.default)(nextProps.history === this.props.history, 'You cannot change <Router history>; it will be ignored') : void 0;
+        "production" !== 'production' ? (0, _routerWarning2.default)((nextProps.routes || nextProps.children) === (this.props.routes || this.props.children), 'You cannot change <Router routes>; it will be ignored') : void 0;
+      },
+      componentWillUnmount: function componentWillUnmount() {
+        if (this._unlisten)
+          this._unlisten();
+      },
+      render: function render() {
+        var _state = this.state;
+        var location = _state.location;
+        var routes = _state.routes;
+        var params = _state.params;
+        var components = _state.components;
+        var _props4 = this.props;
+        var createElement = _props4.createElement;
+        var render = _props4.render;
+        var props = _objectWithoutProperties(_props4, ['createElement', 'render']);
+        if (location == null)
+          return null;
+        Object.keys(Router.propTypes).forEach(function(propType) {
+          return delete props[propType];
+        });
+        return render(_extends({}, props, {
+          history: this.history,
+          router: this.router,
+          location: location,
+          routes: routes,
+          params: params,
+          components: components,
+          createElement: createElement
+        }));
+      }
+    });
+    exports.default = Router;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/Link.js", ["react", "./routerWarning", "./PropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _PropTypes = $__require('./PropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function _objectWithoutProperties(obj, keys) {
+      var target = {};
+      for (var i in obj) {
+        if (keys.indexOf(i) >= 0)
+          continue;
+        if (!Object.prototype.hasOwnProperty.call(obj, i))
+          continue;
+        target[i] = obj[i];
+      }
+      return target;
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var bool = _React$PropTypes.bool;
+    var object = _React$PropTypes.object;
+    var string = _React$PropTypes.string;
+    var func = _React$PropTypes.func;
+    var oneOfType = _React$PropTypes.oneOfType;
+    function isLeftClickEvent(event) {
+      return event.button === 0;
+    }
+    function isModifiedEvent(event) {
+      return !!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey);
+    }
+    function isEmptyObject(object) {
+      for (var p in object) {
+        if (Object.prototype.hasOwnProperty.call(object, p))
+          return false;
+      }
+      return true;
+    }
+    function createLocationDescriptor(to, _ref) {
+      var query = _ref.query;
+      var hash = _ref.hash;
+      var state = _ref.state;
+      if (query || hash || state) {
+        return {
+          pathname: to,
+          query: query,
+          hash: hash,
+          state: state
+        };
+      }
+      return to;
+    }
+    var Link = _react2.default.createClass({
+      displayName: 'Link',
+      contextTypes: {router: _PropTypes.routerShape},
+      propTypes: {
+        to: oneOfType([string, object]).isRequired,
+        query: object,
+        hash: string,
+        state: object,
+        activeStyle: object,
+        activeClassName: string,
+        onlyActiveOnIndex: bool.isRequired,
+        onClick: func,
+        target: string
+      },
+      getDefaultProps: function getDefaultProps() {
+        return {
+          onlyActiveOnIndex: false,
+          style: {}
+        };
+      },
+      handleClick: function handleClick(event) {
+        var allowTransition = true;
+        if (this.props.onClick)
+          this.props.onClick(event);
+        if (isModifiedEvent(event) || !isLeftClickEvent(event))
+          return;
+        if (event.defaultPrevented === true)
+          allowTransition = false;
+        if (this.props.target) {
+          if (!allowTransition)
+            event.preventDefault();
+          return;
+        }
+        event.preventDefault();
+        if (allowTransition) {
+          var _props = this.props;
+          var to = _props.to;
+          var query = _props.query;
+          var hash = _props.hash;
+          var state = _props.state;
+          var location = createLocationDescriptor(to, {
+            query: query,
+            hash: hash,
+            state: state
+          });
+          this.context.router.push(location);
+        }
+      },
+      render: function render() {
+        var _props2 = this.props;
+        var to = _props2.to;
+        var query = _props2.query;
+        var hash = _props2.hash;
+        var state = _props2.state;
+        var activeClassName = _props2.activeClassName;
+        var activeStyle = _props2.activeStyle;
+        var onlyActiveOnIndex = _props2.onlyActiveOnIndex;
+        var props = _objectWithoutProperties(_props2, ['to', 'query', 'hash', 'state', 'activeClassName', 'activeStyle', 'onlyActiveOnIndex']);
+        "production" !== 'production' ? (0, _routerWarning2.default)(!(query || hash || state), 'the `query`, `hash`, and `state` props on `<Link>` are deprecated, use `<Link to={{ pathname, query, hash, state }}/>. http://tiny.cc/router-isActivedeprecated') : void 0;
+        var router = this.context.router;
+        if (router) {
+          var location = createLocationDescriptor(to, {
+            query: query,
+            hash: hash,
+            state: state
+          });
+          props.href = router.createHref(location);
+          if (activeClassName || activeStyle != null && !isEmptyObject(activeStyle)) {
+            if (router.isActive(location, onlyActiveOnIndex)) {
+              if (activeClassName) {
+                if (props.className) {
+                  props.className += ' ' + activeClassName;
+                } else {
+                  props.className = activeClassName;
+                }
+              }
+              if (activeStyle)
+                props.style = _extends({}, props.style, activeStyle);
+            }
+          }
+        }
+        return _react2.default.createElement('a', _extends({}, props, {onClick: this.handleClick}));
+      }
+    });
+    exports.default = Link;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/IndexLink.js", ["react", "./Link"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _extends = Object.assign || function(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
+    }
+    return target;
+  };
+  var _react = $__require('react');
+  var _react2 = _interopRequireDefault(_react);
+  var _Link = $__require('./Link');
+  var _Link2 = _interopRequireDefault(_Link);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  var IndexLink = _react2.default.createClass({
+    displayName: 'IndexLink',
+    render: function render() {
+      return _react2.default.createElement(_Link2.default, _extends({}, this.props, {onlyActiveOnIndex: true}));
+    }
+  });
+  exports.default = IndexLink;
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:hoist-non-react-statics@1.0.6/index.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  var REACT_STATICS = {
+    childContextTypes: true,
+    contextTypes: true,
+    defaultProps: true,
+    displayName: true,
+    getDefaultProps: true,
+    mixins: true,
+    propTypes: true,
+    type: true
+  };
+  var KNOWN_STATICS = {
+    name: true,
+    length: true,
+    prototype: true,
+    caller: true,
+    arguments: true,
+    arity: true
+  };
+  module.exports = function hoistNonReactStatics(targetComponent, sourceComponent) {
+    if (typeof sourceComponent !== 'string') {
+      var keys = Object.getOwnPropertyNames(sourceComponent);
+      for (var i = 0; i < keys.length; ++i) {
+        if (!REACT_STATICS[keys[i]] && !KNOWN_STATICS[keys[i]]) {
+          try {
+            targetComponent[keys[i]] = sourceComponent[keys[i]];
+          } catch (error) {}
+        }
+      }
+    }
+    return targetComponent;
+  };
+  return module.exports;
+});
+
+System.registerDynamic("npm:hoist-non-react-statics@1.0.6.js", ["npm:hoist-non-react-statics@1.0.6/index.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:hoist-non-react-statics@1.0.6/index.js');
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/PropTypes.js", ["react", "./deprecateObjectProperties", "./InternalPropTypes", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.router = exports.routes = exports.route = exports.components = exports.component = exports.location = exports.history = exports.falsy = exports.locationShape = exports.routerShape = undefined;
+    var _react = $__require('react');
+    var _deprecateObjectProperties = $__require('./deprecateObjectProperties');
+    var _deprecateObjectProperties2 = _interopRequireDefault(_deprecateObjectProperties);
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    var InternalPropTypes = _interopRequireWildcard(_InternalPropTypes);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireWildcard(obj) {
+      if (obj && obj.__esModule) {
+        return obj;
+      } else {
+        var newObj = {};
+        if (obj != null) {
+          for (var key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key))
+              newObj[key] = obj[key];
+          }
+        }
+        newObj.default = obj;
+        return newObj;
+      }
+    }
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var func = _react.PropTypes.func;
+    var object = _react.PropTypes.object;
+    var shape = _react.PropTypes.shape;
+    var string = _react.PropTypes.string;
+    var routerShape = exports.routerShape = shape({
+      push: func.isRequired,
+      replace: func.isRequired,
+      go: func.isRequired,
+      goBack: func.isRequired,
+      goForward: func.isRequired,
+      setRouteLeaveHook: func.isRequired,
+      isActive: func.isRequired
+    });
+    var locationShape = exports.locationShape = shape({
+      pathname: string.isRequired,
+      search: string.isRequired,
+      state: object,
+      action: string.isRequired,
+      key: string
+    });
+    var falsy = exports.falsy = InternalPropTypes.falsy;
+    var history = exports.history = InternalPropTypes.history;
+    var location = exports.location = locationShape;
+    var component = exports.component = InternalPropTypes.component;
+    var components = exports.components = InternalPropTypes.components;
+    var route = exports.route = InternalPropTypes.route;
+    var routes = exports.routes = InternalPropTypes.routes;
+    var router = exports.router = routerShape;
+    if ("production" !== 'production') {
+      (function() {
+        var deprecatePropType = function deprecatePropType(propType, message) {
+          return function() {
+            "production" !== 'production' ? (0, _routerWarning2.default)(false, message) : void 0;
+            return propType.apply(undefined, arguments);
+          };
+        };
+        var deprecateInternalPropType = function deprecateInternalPropType(propType) {
+          return deprecatePropType(propType, 'This prop type is not intended for external use, and was previously exported by mistake. These internal prop types are deprecated for external use, and will be removed in a later version.');
+        };
+        var deprecateRenamedPropType = function deprecateRenamedPropType(propType, name) {
+          return deprecatePropType(propType, 'The `' + name + '` prop type is now exported as `' + name + 'Shape` to avoid name conflicts. This export is deprecated and will be removed in a later version.');
+        };
+        exports.falsy = falsy = deprecateInternalPropType(falsy);
+        exports.history = history = deprecateInternalPropType(history);
+        exports.component = component = deprecateInternalPropType(component);
+        exports.components = components = deprecateInternalPropType(components);
+        exports.route = route = deprecateInternalPropType(route);
+        exports.routes = routes = deprecateInternalPropType(routes);
+        exports.location = location = deprecateRenamedPropType(location, 'location');
+        exports.router = router = deprecateRenamedPropType(router, 'router');
+      })();
+    }
+    var defaultExport = {
+      falsy: falsy,
+      history: history,
+      location: location,
+      component: component,
+      components: components,
+      route: route,
+      router: router
+    };
+    if ("production" !== 'production') {
+      defaultExport = (0, _deprecateObjectProperties2.default)(defaultExport, 'The default export from `react-router/lib/PropTypes` is deprecated. Please use the named exports instead.');
+    }
+    exports.default = defaultExport;
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/withRouter.js", ["react", "hoist-non-react-statics", "./PropTypes"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _extends = Object.assign || function(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
+    }
+    return target;
+  };
+  exports.default = withRouter;
+  var _react = $__require('react');
+  var _react2 = _interopRequireDefault(_react);
+  var _hoistNonReactStatics = $__require('hoist-non-react-statics');
+  var _hoistNonReactStatics2 = _interopRequireDefault(_hoistNonReactStatics);
+  var _PropTypes = $__require('./PropTypes');
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  function getDisplayName(WrappedComponent) {
+    return WrappedComponent.displayName || WrappedComponent.name || 'Component';
+  }
+  function withRouter(WrappedComponent) {
+    var WithRouter = _react2.default.createClass({
+      displayName: 'WithRouter',
+      contextTypes: {router: _PropTypes.routerShape},
+      render: function render() {
+        return _react2.default.createElement(WrappedComponent, _extends({}, this.props, {router: this.context.router}));
+      }
+    });
+    WithRouter.displayName = 'withRouter(' + getDisplayName(WrappedComponent) + ')';
+    WithRouter.WrappedComponent = WrappedComponent;
+    return (0, _hoistNonReactStatics2.default)(WithRouter, WrappedComponent);
+  }
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/IndexRedirect.js", ["react", "./routerWarning", "invariant", "./Redirect", "./InternalPropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _Redirect = $__require('./Redirect');
+    var _Redirect2 = _interopRequireDefault(_Redirect);
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var string = _React$PropTypes.string;
+    var object = _React$PropTypes.object;
+    var IndexRedirect = _react2.default.createClass({
+      displayName: 'IndexRedirect',
+      statics: {createRouteFromReactElement: function createRouteFromReactElement(element, parentRoute) {
+          if (parentRoute) {
+            parentRoute.indexRoute = _Redirect2.default.createRouteFromReactElement(element);
+          } else {
+            "production" !== 'production' ? (0, _routerWarning2.default)(false, 'An <IndexRedirect> does not make sense at the root of your route config') : void 0;
+          }
+        }},
+      propTypes: {
+        to: string.isRequired,
+        query: object,
+        state: object,
+        onEnter: _InternalPropTypes.falsy,
+        children: _InternalPropTypes.falsy
+      },
+      render: function render() {
+        !false ? "production" !== 'production' ? (0, _invariant2.default)(false, '<IndexRedirect> elements are for router configuration only and should not be rendered') : (0, _invariant2.default)(false) : void 0;
+      }
+    });
+    exports.default = IndexRedirect;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/IndexRoute.js", ["react", "./routerWarning", "invariant", "./RouteUtils", "./InternalPropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var func = _react2.default.PropTypes.func;
+    var IndexRoute = _react2.default.createClass({
+      displayName: 'IndexRoute',
+      statics: {createRouteFromReactElement: function createRouteFromReactElement(element, parentRoute) {
+          if (parentRoute) {
+            parentRoute.indexRoute = (0, _RouteUtils.createRouteFromReactElement)(element);
+          } else {
+            "production" !== 'production' ? (0, _routerWarning2.default)(false, 'An <IndexRoute> does not make sense at the root of your route config') : void 0;
+          }
+        }},
+      propTypes: {
+        path: _InternalPropTypes.falsy,
+        component: _InternalPropTypes.component,
+        components: _InternalPropTypes.components,
+        getComponent: func,
+        getComponents: func
+      },
+      render: function render() {
+        !false ? "production" !== 'production' ? (0, _invariant2.default)(false, '<IndexRoute> elements are for router configuration only and should not be rendered') : (0, _invariant2.default)(false) : void 0;
+      }
+    });
+    exports.default = IndexRoute;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/Redirect.js", ["react", "invariant", "./RouteUtils", "./PatternUtils", "./InternalPropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _PatternUtils = $__require('./PatternUtils');
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var string = _React$PropTypes.string;
+    var object = _React$PropTypes.object;
+    var Redirect = _react2.default.createClass({
+      displayName: 'Redirect',
+      statics: {
+        createRouteFromReactElement: function createRouteFromReactElement(element) {
+          var route = (0, _RouteUtils.createRouteFromReactElement)(element);
+          if (route.from)
+            route.path = route.from;
+          route.onEnter = function(nextState, replace) {
+            var location = nextState.location;
+            var params = nextState.params;
+            var pathname = void 0;
+            if (route.to.charAt(0) === '/') {
+              pathname = (0, _PatternUtils.formatPattern)(route.to, params);
+            } else if (!route.to) {
+              pathname = location.pathname;
+            } else {
+              var routeIndex = nextState.routes.indexOf(route);
+              var parentPattern = Redirect.getRoutePattern(nextState.routes, routeIndex - 1);
+              var pattern = parentPattern.replace(/\/*$/, '/') + route.to;
+              pathname = (0, _PatternUtils.formatPattern)(pattern, params);
+            }
+            replace({
+              pathname: pathname,
+              query: route.query || location.query,
+              state: route.state || location.state
+            });
+          };
+          return route;
+        },
+        getRoutePattern: function getRoutePattern(routes, routeIndex) {
+          var parentPattern = '';
+          for (var i = routeIndex; i >= 0; i--) {
+            var route = routes[i];
+            var pattern = route.path || '';
+            parentPattern = pattern.replace(/\/*$/, '/') + parentPattern;
+            if (pattern.indexOf('/') === 0)
+              break;
+          }
+          return '/' + parentPattern;
+        }
+      },
+      propTypes: {
+        path: string,
+        from: string,
+        to: string.isRequired,
+        query: object,
+        state: object,
+        onEnter: _InternalPropTypes.falsy,
+        children: _InternalPropTypes.falsy
+      },
+      render: function render() {
+        !false ? "production" !== 'production' ? (0, _invariant2.default)(false, '<Redirect> elements are for router configuration only and should not be rendered') : (0, _invariant2.default)(false) : void 0;
+      }
+    });
+    exports.default = Redirect;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/Route.js", ["react", "invariant", "./RouteUtils", "./InternalPropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var string = _React$PropTypes.string;
+    var func = _React$PropTypes.func;
+    var Route = _react2.default.createClass({
+      displayName: 'Route',
+      statics: {createRouteFromReactElement: _RouteUtils.createRouteFromReactElement},
+      propTypes: {
+        path: string,
+        component: _InternalPropTypes.component,
+        components: _InternalPropTypes.components,
+        getComponent: func,
+        getComponents: func
+      },
+      render: function render() {
+        !false ? "production" !== 'production' ? (0, _invariant2.default)(false, '<Route> elements are for router configuration only and should not be rendered') : (0, _invariant2.default)(false) : void 0;
+      }
+    });
+    exports.default = Route;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/InternalPropTypes.js", ["react"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.routes = exports.route = exports.components = exports.component = exports.history = undefined;
+  exports.falsy = falsy;
+  var _react = $__require('react');
+  var func = _react.PropTypes.func;
+  var object = _react.PropTypes.object;
+  var arrayOf = _react.PropTypes.arrayOf;
+  var oneOfType = _react.PropTypes.oneOfType;
+  var element = _react.PropTypes.element;
+  var shape = _react.PropTypes.shape;
+  var string = _react.PropTypes.string;
+  function falsy(props, propName, componentName) {
+    if (props[propName])
+      return new Error('<' + componentName + '> should not have a "' + propName + '" prop');
+  }
+  var history = exports.history = shape({
+    listen: func.isRequired,
+    push: func.isRequired,
+    replace: func.isRequired,
+    go: func.isRequired,
+    goBack: func.isRequired,
+    goForward: func.isRequired
+  });
+  var component = exports.component = oneOfType([func, string]);
+  var components = exports.components = oneOfType([component, object]);
+  var route = exports.route = oneOfType([object, element]);
+  var routes = exports.routes = oneOfType([route, arrayOf(route)]);
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/History.js", ["./routerWarning", "./InternalPropTypes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _InternalPropTypes = $__require('./InternalPropTypes');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var History = {
+      contextTypes: {history: _InternalPropTypes.history},
+      componentWillMount: function componentWillMount() {
+        "production" !== 'production' ? (0, _routerWarning2.default)(false, 'the `History` mixin is deprecated, please access `context.router` with your own `contextTypes`. http://tiny.cc/router-historymixin') : void 0;
+        this.history = this.context.history;
+      }
+    };
+    exports.default = History;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/Lifecycle.js", ["./routerWarning", "react", "invariant", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var object = _react2.default.PropTypes.object;
+    var Lifecycle = {
+      contextTypes: {
+        history: object.isRequired,
+        route: object
+      },
+      propTypes: {route: object},
+      componentDidMount: function componentDidMount() {
+        "production" !== 'production' ? (0, _routerWarning2.default)(false, 'the `Lifecycle` mixin is deprecated, please use `context.router.setRouteLeaveHook(route, hook)`. http://tiny.cc/router-lifecyclemixin') : void 0;
+        !this.routerWillLeave ? "production" !== 'production' ? (0, _invariant2.default)(false, 'The Lifecycle mixin requires you to define a routerWillLeave method') : (0, _invariant2.default)(false) : void 0;
+        var route = this.props.route || this.context.route;
+        !route ? "production" !== 'production' ? (0, _invariant2.default)(false, 'The Lifecycle mixin must be used on either a) a <Route component> or ' + 'b) a descendant of a <Route component> that uses the RouteContext mixin') : (0, _invariant2.default)(false) : void 0;
+        this._unlistenBeforeLeavingRoute = this.context.history.listenBeforeLeavingRoute(route, this.routerWillLeave);
+      },
+      componentWillUnmount: function componentWillUnmount() {
+        if (this._unlistenBeforeLeavingRoute)
+          this._unlistenBeforeLeavingRoute();
+      }
+    };
+    exports.default = Lifecycle;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/RouteContext.js", ["./routerWarning", "react", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var object = _react2.default.PropTypes.object;
+    var RouteContext = {
+      propTypes: {route: object.isRequired},
+      childContextTypes: {route: object.isRequired},
+      getChildContext: function getChildContext() {
+        return {route: this.props.route};
+      },
+      componentWillMount: function componentWillMount() {
+        "production" !== 'production' ? (0, _routerWarning2.default)(false, 'The `RouteContext` mixin is deprecated. You can provide `this.props.route` on context with your own `contextTypes`. http://tiny.cc/router-routecontextmixin') : void 0;
+      }
+    };
+    exports.default = RouteContext;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/useRoutes.js", ["history/lib/useQueries", "./createTransitionManager", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _useQueries = $__require('history/lib/useQueries');
+    var _useQueries2 = _interopRequireDefault(_useQueries);
+    var _createTransitionManager = $__require('./createTransitionManager');
+    var _createTransitionManager2 = _interopRequireDefault(_createTransitionManager);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function _objectWithoutProperties(obj, keys) {
+      var target = {};
+      for (var i in obj) {
+        if (keys.indexOf(i) >= 0)
+          continue;
+        if (!Object.prototype.hasOwnProperty.call(obj, i))
+          continue;
+        target[i] = obj[i];
+      }
+      return target;
+    }
+    function useRoutes(createHistory) {
+      "production" !== 'production' ? (0, _routerWarning2.default)(false, '`useRoutes` is deprecated. Please use `createTransitionManager` instead.') : void 0;
+      return function() {
+        var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+        var routes = _ref.routes;
+        var options = _objectWithoutProperties(_ref, ['routes']);
+        var history = (0, _useQueries2.default)(createHistory)(options);
+        var transitionManager = (0, _createTransitionManager2.default)(history, routes);
+        return _extends({}, history, transitionManager);
+      };
+    }
+    exports.default = useRoutes;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/RoutingContext.js", ["react", "./RouterContext", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _RouterContext = $__require('./RouterContext');
+    var _RouterContext2 = _interopRequireDefault(_RouterContext);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var RoutingContext = _react2.default.createClass({
+      displayName: 'RoutingContext',
+      componentWillMount: function componentWillMount() {
+        "production" !== 'production' ? (0, _routerWarning2.default)(false, '`RoutingContext` has been renamed to `RouterContext`. Please use `import { RouterContext } from \'react-router\'`. http://tiny.cc/router-routercontext') : void 0;
+      },
+      render: function render() {
+        return _react2.default.createElement(_RouterContext2.default, this.props);
+      }
+    });
+    exports.default = RoutingContext;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/computeChangedRoutes.js", ["./PatternUtils"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _PatternUtils = $__require('./PatternUtils');
+  function routeParamsChanged(route, prevState, nextState) {
+    if (!route.path)
+      return false;
+    var paramNames = (0, _PatternUtils.getParamNames)(route.path);
+    return paramNames.some(function(paramName) {
+      return prevState.params[paramName] !== nextState.params[paramName];
+    });
+  }
+  function computeChangedRoutes(prevState, nextState) {
+    var prevRoutes = prevState && prevState.routes;
+    var nextRoutes = nextState.routes;
+    var leaveRoutes = void 0,
+        changeRoutes = void 0,
+        enterRoutes = void 0;
+    if (prevRoutes) {
+      (function() {
+        var parentIsLeaving = false;
+        leaveRoutes = prevRoutes.filter(function(route) {
+          if (parentIsLeaving) {
+            return true;
+          } else {
+            var isLeaving = nextRoutes.indexOf(route) === -1 || routeParamsChanged(route, prevState, nextState);
+            if (isLeaving)
+              parentIsLeaving = true;
+            return isLeaving;
+          }
+        });
+        leaveRoutes.reverse();
+        enterRoutes = [];
+        changeRoutes = [];
+        nextRoutes.forEach(function(route) {
+          var isNew = prevRoutes.indexOf(route) === -1;
+          var paramsChanged = leaveRoutes.indexOf(route) !== -1;
+          if (isNew || paramsChanged)
+            enterRoutes.push(route);
+          else
+            changeRoutes.push(route);
+        });
+      })();
+    } else {
+      leaveRoutes = [];
+      changeRoutes = [];
+      enterRoutes = nextRoutes;
+    }
+    return {
+      leaveRoutes: leaveRoutes,
+      changeRoutes: changeRoutes,
+      enterRoutes: enterRoutes
+    };
+  }
+  exports.default = computeChangedRoutes;
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/TransitionUtils.js", ["./AsyncUtils", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.runEnterHooks = runEnterHooks;
+    exports.runChangeHooks = runChangeHooks;
+    exports.runLeaveHooks = runLeaveHooks;
+    var _AsyncUtils = $__require('./AsyncUtils');
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function createTransitionHook(hook, route, asyncArity) {
+      return function() {
+        for (var _len = arguments.length,
+            args = Array(_len),
+            _key = 0; _key < _len; _key++) {
+          args[_key] = arguments[_key];
+        }
+        hook.apply(route, args);
+        if (hook.length < asyncArity) {
+          var callback = args[args.length - 1];
+          callback();
+        }
+      };
+    }
+    function getEnterHooks(routes) {
+      return routes.reduce(function(hooks, route) {
+        if (route.onEnter)
+          hooks.push(createTransitionHook(route.onEnter, route, 3));
+        return hooks;
+      }, []);
+    }
+    function getChangeHooks(routes) {
+      return routes.reduce(function(hooks, route) {
+        if (route.onChange)
+          hooks.push(createTransitionHook(route.onChange, route, 4));
+        return hooks;
+      }, []);
+    }
+    function runTransitionHooks(length, iter, callback) {
+      if (!length) {
+        callback();
+        return;
+      }
+      var redirectInfo = void 0;
+      function replace(location, deprecatedPathname, deprecatedQuery) {
+        if (deprecatedPathname) {
+          "production" !== 'production' ? (0, _routerWarning2.default)(false, '`replaceState(state, pathname, query) is deprecated; use `replace(location)` with a location descriptor instead. http://tiny.cc/router-isActivedeprecated') : void 0;
+          redirectInfo = {
+            pathname: deprecatedPathname,
+            query: deprecatedQuery,
+            state: location
+          };
+          return;
+        }
+        redirectInfo = location;
+      }
+      (0, _AsyncUtils.loopAsync)(length, function(index, next, done) {
+        iter(index, replace, function(error) {
+          if (error || redirectInfo) {
+            done(error, redirectInfo);
+          } else {
+            next();
+          }
+        });
+      }, callback);
+    }
+    function runEnterHooks(routes, nextState, callback) {
+      var hooks = getEnterHooks(routes);
+      return runTransitionHooks(hooks.length, function(index, replace, next) {
+        hooks[index](nextState, replace, next);
+      }, callback);
+    }
+    function runChangeHooks(routes, state, nextState, callback) {
+      var hooks = getChangeHooks(routes);
+      return runTransitionHooks(hooks.length, function(index, replace, next) {
+        hooks[index](state, nextState, replace, next);
+      }, callback);
+    }
+    function runLeaveHooks(routes) {
+      for (var i = 0,
+          len = routes.length; i < len; ++i) {
+        if (routes[i].onLeave)
+          routes[i].onLeave.call(routes[i]);
+      }
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/isActive.js", ["./PatternUtils"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+    return typeof obj;
+  } : function(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+  };
+  exports.default = isActive;
+  var _PatternUtils = $__require('./PatternUtils');
+  function deepEqual(a, b) {
+    if (a == b)
+      return true;
+    if (a == null || b == null)
+      return false;
+    if (Array.isArray(a)) {
+      return Array.isArray(b) && a.length === b.length && a.every(function(item, index) {
+        return deepEqual(item, b[index]);
+      });
+    }
+    if ((typeof a === 'undefined' ? 'undefined' : _typeof(a)) === 'object') {
+      for (var p in a) {
+        if (!Object.prototype.hasOwnProperty.call(a, p)) {
+          continue;
+        }
+        if (a[p] === undefined) {
+          if (b[p] !== undefined) {
+            return false;
+          }
+        } else if (!Object.prototype.hasOwnProperty.call(b, p)) {
+          return false;
+        } else if (!deepEqual(a[p], b[p])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return String(a) === String(b);
+  }
+  function pathIsActive(pathname, currentPathname) {
+    if (currentPathname.charAt(0) !== '/') {
+      currentPathname = '/' + currentPathname;
+    }
+    if (pathname.charAt(pathname.length - 1) !== '/') {
+      pathname += '/';
+    }
+    if (currentPathname.charAt(currentPathname.length - 1) !== '/') {
+      currentPathname += '/';
+    }
+    return currentPathname === pathname;
+  }
+  function routeIsActive(pathname, routes, params) {
+    var remainingPathname = pathname,
+        paramNames = [],
+        paramValues = [];
+    for (var i = 0,
+        len = routes.length; i < len; ++i) {
+      var route = routes[i];
+      var pattern = route.path || '';
+      if (pattern.charAt(0) === '/') {
+        remainingPathname = pathname;
+        paramNames = [];
+        paramValues = [];
+      }
+      if (remainingPathname !== null && pattern) {
+        var matched = (0, _PatternUtils.matchPattern)(pattern, remainingPathname);
+        if (matched) {
+          remainingPathname = matched.remainingPathname;
+          paramNames = [].concat(paramNames, matched.paramNames);
+          paramValues = [].concat(paramValues, matched.paramValues);
+        } else {
+          remainingPathname = null;
+        }
+        if (remainingPathname === '') {
+          return paramNames.every(function(paramName, index) {
+            return String(paramValues[index]) === String(params[paramName]);
+          });
+        }
+      }
+    }
+    return false;
+  }
+  function queryIsActive(query, activeQuery) {
+    if (activeQuery == null)
+      return query == null;
+    if (query == null)
+      return true;
+    return deepEqual(query, activeQuery);
+  }
+  function isActive(_ref, indexOnly, currentLocation, routes, params) {
+    var pathname = _ref.pathname;
+    var query = _ref.query;
+    if (currentLocation == null)
+      return false;
+    if (pathname.charAt(0) !== '/') {
+      pathname = '/' + pathname;
+    }
+    if (!pathIsActive(pathname, currentLocation.pathname)) {
+      if (indexOnly || !routeIsActive(pathname, routes, params)) {
+        return false;
+      }
+    }
+    return queryIsActive(query, currentLocation.query);
+  }
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/getComponents.js", ["./AsyncUtils", "./deprecateObjectProperties", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _AsyncUtils = $__require('./AsyncUtils');
+    var _deprecateObjectProperties = $__require('./deprecateObjectProperties');
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function getComponentsForRoute(nextState, route, callback) {
+      if (route.component || route.components) {
+        callback(null, route.component || route.components);
+        return;
+      }
+      var getComponent = route.getComponent || route.getComponents;
+      if (!getComponent) {
+        callback();
+        return;
+      }
+      var location = nextState.location;
+      var nextStateWithLocation = void 0;
+      if ("production" !== 'production' && _deprecateObjectProperties.canUseMembrane) {
+        nextStateWithLocation = _extends({}, nextState);
+        var _loop = function _loop(prop) {
+          if (!Object.prototype.hasOwnProperty.call(location, prop)) {
+            return 'continue';
+          }
+          Object.defineProperty(nextStateWithLocation, prop, {get: function get() {
+              "production" !== 'production' ? (0, _routerWarning2.default)(false, 'Accessing location properties from the first argument to `getComponent` and `getComponents` is deprecated. That argument is now the router state (`nextState`) rather than the location. To access the location, use `nextState.location`.') : void 0;
+              return location[prop];
+            }});
+        };
+        for (var prop in location) {
+          var _ret = _loop(prop);
+          if (_ret === 'continue')
+            continue;
+        }
+      } else {
+        nextStateWithLocation = _extends({}, nextState, location);
+      }
+      getComponent.call(route, nextStateWithLocation, callback);
+    }
+    function getComponents(nextState, callback) {
+      (0, _AsyncUtils.mapAsync)(nextState.routes, function(route, index, callback) {
+        getComponentsForRoute(nextState, route, callback);
+      }, callback);
+    }
+    exports.default = getComponents;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/AsyncUtils.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.loopAsync = loopAsync;
+  exports.mapAsync = mapAsync;
+  function loopAsync(turns, work, callback) {
+    var currentTurn = 0,
+        isDone = false;
+    var sync = false,
+        hasNext = false,
+        doneArgs = void 0;
+    function done() {
+      isDone = true;
+      if (sync) {
+        doneArgs = [].concat(Array.prototype.slice.call(arguments));
+        return;
+      }
+      callback.apply(this, arguments);
+    }
+    function next() {
+      if (isDone) {
+        return;
+      }
+      hasNext = true;
+      if (sync) {
+        return;
+      }
+      sync = true;
+      while (!isDone && currentTurn < turns && hasNext) {
+        hasNext = false;
+        work.call(this, currentTurn++, next, done);
+      }
+      sync = false;
+      if (isDone) {
+        callback.apply(this, doneArgs);
+        return;
+      }
+      if (currentTurn >= turns && hasNext) {
+        isDone = true;
+        callback();
+      }
+    }
+    next();
+  }
+  function mapAsync(array, work, callback) {
+    var length = array.length;
+    var values = [];
+    if (length === 0)
+      return callback(null, values);
+    var isDone = false,
+        doneCount = 0;
+    function done(index, error, value) {
+      if (isDone)
+        return;
+      if (error) {
+        isDone = true;
+        callback(error);
+      } else {
+        values[index] = value;
+        isDone = ++doneCount === length;
+        if (isDone)
+          callback(null, values);
+      }
+    }
+    array.forEach(function(item, index) {
+      work(item, index, function(error, value) {
+        done(index, error, value);
+      });
+    });
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/matchRoutes.js", ["./routerWarning", "./AsyncUtils", "./PatternUtils", "./RouteUtils", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+      return typeof obj;
+    } : function(obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+    };
+    exports.default = matchRoutes;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _AsyncUtils = $__require('./AsyncUtils');
+    var _PatternUtils = $__require('./PatternUtils');
+    var _RouteUtils = $__require('./RouteUtils');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function getChildRoutes(route, location, callback) {
+      if (route.childRoutes) {
+        return [null, route.childRoutes];
+      }
+      if (!route.getChildRoutes) {
+        return [];
+      }
+      var sync = true,
+          result = void 0;
+      route.getChildRoutes(location, function(error, childRoutes) {
+        childRoutes = !error && (0, _RouteUtils.createRoutes)(childRoutes);
+        if (sync) {
+          result = [error, childRoutes];
+          return;
+        }
+        callback(error, childRoutes);
+      });
+      sync = false;
+      return result;
+    }
+    function getIndexRoute(route, location, callback) {
+      if (route.indexRoute) {
+        callback(null, route.indexRoute);
+      } else if (route.getIndexRoute) {
+        route.getIndexRoute(location, function(error, indexRoute) {
+          callback(error, !error && (0, _RouteUtils.createRoutes)(indexRoute)[0]);
+        });
+      } else if (route.childRoutes) {
+        (function() {
+          var pathless = route.childRoutes.filter(function(childRoute) {
+            return !childRoute.path;
+          });
+          (0, _AsyncUtils.loopAsync)(pathless.length, function(index, next, done) {
+            getIndexRoute(pathless[index], location, function(error, indexRoute) {
+              if (error || indexRoute) {
+                var routes = [pathless[index]].concat(Array.isArray(indexRoute) ? indexRoute : [indexRoute]);
+                done(error, routes);
+              } else {
+                next();
+              }
+            });
+          }, function(err, routes) {
+            callback(null, routes);
+          });
+        })();
+      } else {
+        callback();
+      }
+    }
+    function assignParams(params, paramNames, paramValues) {
+      return paramNames.reduce(function(params, paramName, index) {
+        var paramValue = paramValues && paramValues[index];
+        if (Array.isArray(params[paramName])) {
+          params[paramName].push(paramValue);
+        } else if (paramName in params) {
+          params[paramName] = [params[paramName], paramValue];
+        } else {
+          params[paramName] = paramValue;
+        }
+        return params;
+      }, params);
+    }
+    function createParams(paramNames, paramValues) {
+      return assignParams({}, paramNames, paramValues);
+    }
+    function matchRouteDeep(route, location, remainingPathname, paramNames, paramValues, callback) {
+      var pattern = route.path || '';
+      if (pattern.charAt(0) === '/') {
+        remainingPathname = location.pathname;
+        paramNames = [];
+        paramValues = [];
+      }
+      if (remainingPathname !== null && pattern) {
+        try {
+          var matched = (0, _PatternUtils.matchPattern)(pattern, remainingPathname);
+          if (matched) {
+            remainingPathname = matched.remainingPathname;
+            paramNames = [].concat(paramNames, matched.paramNames);
+            paramValues = [].concat(paramValues, matched.paramValues);
+          } else {
+            remainingPathname = null;
+          }
+        } catch (error) {
+          callback(error);
+        }
+        if (remainingPathname === '') {
+          var _ret2 = function() {
+            var match = {
+              routes: [route],
+              params: createParams(paramNames, paramValues)
+            };
+            getIndexRoute(route, location, function(error, indexRoute) {
+              if (error) {
+                callback(error);
+              } else {
+                if (Array.isArray(indexRoute)) {
+                  var _match$routes;
+                  "production" !== 'production' ? (0, _routerWarning2.default)(indexRoute.every(function(route) {
+                    return !route.path;
+                  }), 'Index routes should not have paths') : void 0;
+                  (_match$routes = match.routes).push.apply(_match$routes, indexRoute);
+                } else if (indexRoute) {
+                  "production" !== 'production' ? (0, _routerWarning2.default)(!indexRoute.path, 'Index routes should not have paths') : void 0;
+                  match.routes.push(indexRoute);
+                }
+                callback(null, match);
+              }
+            });
+            return {v: void 0};
+          }();
+          if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object")
+            return _ret2.v;
+        }
+      }
+      if (remainingPathname != null || route.childRoutes) {
+        var onChildRoutes = function onChildRoutes(error, childRoutes) {
+          if (error) {
+            callback(error);
+          } else if (childRoutes) {
+            matchRoutes(childRoutes, location, function(error, match) {
+              if (error) {
+                callback(error);
+              } else if (match) {
+                match.routes.unshift(route);
+                callback(null, match);
+              } else {
+                callback();
+              }
+            }, remainingPathname, paramNames, paramValues);
+          } else {
+            callback();
+          }
+        };
+        var result = getChildRoutes(route, location, onChildRoutes);
+        if (result) {
+          onChildRoutes.apply(undefined, result);
+        }
+      } else {
+        callback();
+      }
+    }
+    function matchRoutes(routes, location, callback, remainingPathname) {
+      var paramNames = arguments.length <= 4 || arguments[4] === undefined ? [] : arguments[4];
+      var paramValues = arguments.length <= 5 || arguments[5] === undefined ? [] : arguments[5];
+      if (remainingPathname === undefined) {
+        if (location.pathname.charAt(0) !== '/') {
+          location = _extends({}, location, {pathname: '/' + location.pathname});
+        }
+        remainingPathname = location.pathname;
+      }
+      (0, _AsyncUtils.loopAsync)(routes.length, function(index, next, done) {
+        matchRouteDeep(routes[index], location, remainingPathname, paramNames, paramValues, function(error, match) {
+          if (error || match) {
+            done(error, match);
+          } else {
+            next();
+          }
+        });
+      }, callback);
+    }
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/createTransitionManager.js", ["./routerWarning", "history/lib/Actions", "./computeChangedRoutes", "./TransitionUtils", "./isActive", "./getComponents", "./matchRoutes", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    exports.default = createTransitionManager;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    var _Actions = $__require('history/lib/Actions');
+    var _computeChangedRoutes2 = $__require('./computeChangedRoutes');
+    var _computeChangedRoutes3 = _interopRequireDefault(_computeChangedRoutes2);
+    var _TransitionUtils = $__require('./TransitionUtils');
+    var _isActive2 = $__require('./isActive');
+    var _isActive3 = _interopRequireDefault(_isActive2);
+    var _getComponents = $__require('./getComponents');
+    var _getComponents2 = _interopRequireDefault(_getComponents);
+    var _matchRoutes = $__require('./matchRoutes');
+    var _matchRoutes2 = _interopRequireDefault(_matchRoutes);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function hasAnyProperties(object) {
+      for (var p in object) {
+        if (Object.prototype.hasOwnProperty.call(object, p))
+          return true;
+      }
+      return false;
+    }
+    function createTransitionManager(history, routes) {
+      var state = {};
+      function isActive(location) {
+        var indexOnlyOrDeprecatedQuery = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+        var deprecatedIndexOnly = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+        var indexOnly = void 0;
+        if (indexOnlyOrDeprecatedQuery && indexOnlyOrDeprecatedQuery !== true || deprecatedIndexOnly !== null) {
+          "production" !== 'production' ? (0, _routerWarning2.default)(false, '`isActive(pathname, query, indexOnly) is deprecated; use `isActive(location, indexOnly)` with a location descriptor instead. http://tiny.cc/router-isActivedeprecated') : void 0;
+          location = {
+            pathname: location,
+            query: indexOnlyOrDeprecatedQuery
+          };
+          indexOnly = deprecatedIndexOnly || false;
+        } else {
+          location = history.createLocation(location);
+          indexOnly = indexOnlyOrDeprecatedQuery;
+        }
+        return (0, _isActive3.default)(location, indexOnly, state.location, state.routes, state.params);
+      }
+      function createLocationFromRedirectInfo(location) {
+        return history.createLocation(location, _Actions.REPLACE);
+      }
+      var partialNextState = void 0;
+      function match(location, callback) {
+        if (partialNextState && partialNextState.location === location) {
+          finishMatch(partialNextState, callback);
+        } else {
+          (0, _matchRoutes2.default)(routes, location, function(error, nextState) {
+            if (error) {
+              callback(error);
+            } else if (nextState) {
+              finishMatch(_extends({}, nextState, {location: location}), callback);
+            } else {
+              callback();
+            }
+          });
+        }
+      }
+      function finishMatch(nextState, callback) {
+        var _computeChangedRoutes = (0, _computeChangedRoutes3.default)(state, nextState);
+        var leaveRoutes = _computeChangedRoutes.leaveRoutes;
+        var changeRoutes = _computeChangedRoutes.changeRoutes;
+        var enterRoutes = _computeChangedRoutes.enterRoutes;
+        (0, _TransitionUtils.runLeaveHooks)(leaveRoutes);
+        leaveRoutes.filter(function(route) {
+          return enterRoutes.indexOf(route) === -1;
+        }).forEach(removeListenBeforeHooksForRoute);
+        (0, _TransitionUtils.runChangeHooks)(changeRoutes, state, nextState, function(error, redirectInfo) {
+          if (error || redirectInfo)
+            return handleErrorOrRedirect(error, redirectInfo);
+          (0, _TransitionUtils.runEnterHooks)(enterRoutes, nextState, finishEnterHooks);
+        });
+        function finishEnterHooks(error, redirectInfo) {
+          if (error || redirectInfo)
+            return handleErrorOrRedirect(error, redirectInfo);
+          (0, _getComponents2.default)(nextState, function(error, components) {
+            if (error) {
+              callback(error);
+            } else {
+              callback(null, null, state = _extends({}, nextState, {components: components}));
+            }
+          });
+        }
+        function handleErrorOrRedirect(error, redirectInfo) {
+          if (error)
+            callback(error);
+          else
+            callback(null, createLocationFromRedirectInfo(redirectInfo));
+        }
+      }
+      var RouteGuid = 1;
+      function getRouteID(route) {
+        var create = arguments.length <= 1 || arguments[1] === undefined ? true : arguments[1];
+        return route.__id__ || create && (route.__id__ = RouteGuid++);
+      }
+      var RouteHooks = Object.create(null);
+      function getRouteHooksForRoutes(routes) {
+        return routes.reduce(function(hooks, route) {
+          hooks.push.apply(hooks, RouteHooks[getRouteID(route)]);
+          return hooks;
+        }, []);
+      }
+      function transitionHook(location, callback) {
+        (0, _matchRoutes2.default)(routes, location, function(error, nextState) {
+          if (nextState == null) {
+            callback();
+            return;
+          }
+          partialNextState = _extends({}, nextState, {location: location});
+          var hooks = getRouteHooksForRoutes((0, _computeChangedRoutes3.default)(state, partialNextState).leaveRoutes);
+          var result = void 0;
+          for (var i = 0,
+              len = hooks.length; result == null && i < len; ++i) {
+            result = hooks[i](location);
+          }
+          callback(result);
+        });
+      }
+      function beforeUnloadHook() {
+        if (state.routes) {
+          var hooks = getRouteHooksForRoutes(state.routes);
+          var message = void 0;
+          for (var i = 0,
+              len = hooks.length; typeof message !== 'string' && i < len; ++i) {
+            message = hooks[i]();
+          }
+          return message;
+        }
+      }
+      var unlistenBefore = void 0,
+          unlistenBeforeUnload = void 0;
+      function removeListenBeforeHooksForRoute(route) {
+        var routeID = getRouteID(route, false);
+        if (!routeID) {
+          return;
+        }
+        delete RouteHooks[routeID];
+        if (!hasAnyProperties(RouteHooks)) {
+          if (unlistenBefore) {
+            unlistenBefore();
+            unlistenBefore = null;
+          }
+          if (unlistenBeforeUnload) {
+            unlistenBeforeUnload();
+            unlistenBeforeUnload = null;
+          }
+        }
+      }
+      function listenBeforeLeavingRoute(route, hook) {
+        var routeID = getRouteID(route);
+        var hooks = RouteHooks[routeID];
+        if (!hooks) {
+          var thereWereNoRouteHooks = !hasAnyProperties(RouteHooks);
+          RouteHooks[routeID] = [hook];
+          if (thereWereNoRouteHooks) {
+            unlistenBefore = history.listenBefore(transitionHook);
+            if (history.listenBeforeUnload)
+              unlistenBeforeUnload = history.listenBeforeUnload(beforeUnloadHook);
+          }
+        } else {
+          if (hooks.indexOf(hook) === -1) {
+            "production" !== 'production' ? (0, _routerWarning2.default)(false, 'adding multiple leave hooks for the same route is deprecated; manage multiple confirmations in your own code instead') : void 0;
+            hooks.push(hook);
+          }
+        }
+        return function() {
+          var hooks = RouteHooks[routeID];
+          if (hooks) {
+            var newHooks = hooks.filter(function(item) {
+              return item !== hook;
+            });
+            if (newHooks.length === 0) {
+              removeListenBeforeHooksForRoute(route);
+            } else {
+              RouteHooks[routeID] = newHooks;
+            }
+          }
+        };
+      }
+      function listen(listener) {
+        return history.listen(function(location) {
+          if (state.location === location) {
+            listener(null, state);
+          } else {
+            match(location, function(error, redirectLocation, nextState) {
+              if (error) {
+                listener(error);
+              } else if (redirectLocation) {
+                history.transitionTo(redirectLocation);
+              } else if (nextState) {
+                listener(null, nextState);
+              } else {
+                "production" !== 'production' ? (0, _routerWarning2.default)(false, 'Location "%s" did not match any routes', location.pathname + location.search + location.hash) : void 0;
+              }
+            });
+          }
+        });
+      }
+      return {
+        isActive: isActive,
+        match: match,
+        listenBeforeLeavingRoute: listenBeforeLeavingRoute,
+        listen: listen
+      };
+    }
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/RouterUtils.js", ["./deprecateObjectProperties", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    exports.createRouterObject = createRouterObject;
+    exports.createRoutingHistory = createRoutingHistory;
+    var _deprecateObjectProperties = $__require('./deprecateObjectProperties');
+    var _deprecateObjectProperties2 = _interopRequireDefault(_deprecateObjectProperties);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function createRouterObject(history, transitionManager) {
+      return _extends({}, history, {
+        setRouteLeaveHook: transitionManager.listenBeforeLeavingRoute,
+        isActive: transitionManager.isActive
+      });
+    }
+    function createRoutingHistory(history, transitionManager) {
+      history = _extends({}, history, transitionManager);
+      if ("production" !== 'production') {
+        history = (0, _deprecateObjectProperties2.default)(history, '`props.history` and `context.history` are deprecated. Please use `context.router`. http://tiny.cc/router-contextchanges');
+      }
+      return history;
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/match.js", ["invariant", "./createMemoryHistory", "./createTransitionManager", "./RouteUtils", "./RouterUtils", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _createMemoryHistory = $__require('./createMemoryHistory');
+    var _createMemoryHistory2 = _interopRequireDefault(_createMemoryHistory);
+    var _createTransitionManager = $__require('./createTransitionManager');
+    var _createTransitionManager2 = _interopRequireDefault(_createTransitionManager);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _RouterUtils = $__require('./RouterUtils');
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function _objectWithoutProperties(obj, keys) {
+      var target = {};
+      for (var i in obj) {
+        if (keys.indexOf(i) >= 0)
+          continue;
+        if (!Object.prototype.hasOwnProperty.call(obj, i))
+          continue;
+        target[i] = obj[i];
+      }
+      return target;
+    }
+    function match(_ref, callback) {
+      var history = _ref.history;
+      var routes = _ref.routes;
+      var location = _ref.location;
+      var options = _objectWithoutProperties(_ref, ['history', 'routes', 'location']);
+      !(history || location) ? "production" !== 'production' ? (0, _invariant2.default)(false, 'match needs a history or a location') : (0, _invariant2.default)(false) : void 0;
+      history = history ? history : (0, _createMemoryHistory2.default)(options);
+      var transitionManager = (0, _createTransitionManager2.default)(history, (0, _RouteUtils.createRoutes)(routes));
+      var unlisten = void 0;
+      if (location) {
+        location = history.createLocation(location);
+      } else {
+        unlisten = history.listen(function(historyLocation) {
+          location = historyLocation;
+        });
+      }
+      var router = (0, _RouterUtils.createRouterObject)(history, transitionManager);
+      history = (0, _RouterUtils.createRoutingHistory)(history, transitionManager);
+      transitionManager.match(location, function(error, redirectLocation, nextState) {
+        callback(error, redirectLocation, nextState && _extends({}, nextState, {
+          history: history,
+          router: router,
+          matchContext: {
+            history: history,
+            transitionManager: transitionManager,
+            router: router
+          }
+        }));
+        if (unlisten) {
+          unlisten();
+        }
+      });
+    }
+    exports.default = match;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/deprecateObjectProperties.js", ["./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.canUseMembrane = undefined;
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var canUseMembrane = exports.canUseMembrane = false;
+    var deprecateObjectProperties = function deprecateObjectProperties(object) {
+      return object;
+    };
+    if ("production" !== 'production') {
+      try {
+        if (Object.defineProperty({}, 'x', {get: function get() {
+            return true;
+          }}).x) {
+          exports.canUseMembrane = canUseMembrane = true;
+        }
+      } catch (e) {}
+      if (canUseMembrane) {
+        deprecateObjectProperties = function deprecateObjectProperties(object, message) {
+          var membrane = {};
+          var _loop = function _loop(prop) {
+            if (!Object.prototype.hasOwnProperty.call(object, prop)) {
+              return 'continue';
+            }
+            if (typeof object[prop] === 'function') {
+              membrane[prop] = function() {
+                "production" !== 'production' ? (0, _routerWarning2.default)(false, message) : void 0;
+                return object[prop].apply(object, arguments);
+              };
+              return 'continue';
+            }
+            Object.defineProperty(membrane, prop, {get: function get() {
+                "production" !== 'production' ? (0, _routerWarning2.default)(false, message) : void 0;
+                return object[prop];
+              }});
+          };
+          for (var prop in object) {
+            var _ret = _loop(prop);
+            if (_ret === 'continue')
+              continue;
+          }
+          return membrane;
+        };
+      }
+    }
+    exports.default = deprecateObjectProperties;
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/PatternUtils.js", ["invariant", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.compilePattern = compilePattern;
+    exports.matchPattern = matchPattern;
+    exports.getParamNames = getParamNames;
+    exports.getParams = getParams;
+    exports.formatPattern = formatPattern;
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    function _compilePattern(pattern) {
+      var regexpSource = '';
+      var paramNames = [];
+      var tokens = [];
+      var match = void 0,
+          lastIndex = 0,
+          matcher = /:([a-zA-Z_$][a-zA-Z0-9_$]*)|\*\*|\*|\(|\)/g;
+      while (match = matcher.exec(pattern)) {
+        if (match.index !== lastIndex) {
+          tokens.push(pattern.slice(lastIndex, match.index));
+          regexpSource += escapeRegExp(pattern.slice(lastIndex, match.index));
+        }
+        if (match[1]) {
+          regexpSource += '([^/]+)';
+          paramNames.push(match[1]);
+        } else if (match[0] === '**') {
+          regexpSource += '(.*)';
+          paramNames.push('splat');
+        } else if (match[0] === '*') {
+          regexpSource += '(.*?)';
+          paramNames.push('splat');
+        } else if (match[0] === '(') {
+          regexpSource += '(?:';
+        } else if (match[0] === ')') {
+          regexpSource += ')?';
+        }
+        tokens.push(match[0]);
+        lastIndex = matcher.lastIndex;
+      }
+      if (lastIndex !== pattern.length) {
+        tokens.push(pattern.slice(lastIndex, pattern.length));
+        regexpSource += escapeRegExp(pattern.slice(lastIndex, pattern.length));
+      }
+      return {
+        pattern: pattern,
+        regexpSource: regexpSource,
+        paramNames: paramNames,
+        tokens: tokens
+      };
+    }
+    var CompiledPatternsCache = {};
+    function compilePattern(pattern) {
+      if (!(pattern in CompiledPatternsCache))
+        CompiledPatternsCache[pattern] = _compilePattern(pattern);
+      return CompiledPatternsCache[pattern];
+    }
+    function matchPattern(pattern, pathname) {
+      if (pattern.charAt(0) !== '/') {
+        pattern = '/' + pattern;
+      }
+      var _compilePattern2 = compilePattern(pattern);
+      var regexpSource = _compilePattern2.regexpSource;
+      var paramNames = _compilePattern2.paramNames;
+      var tokens = _compilePattern2.tokens;
+      if (pattern.charAt(pattern.length - 1) !== '/') {
+        regexpSource += '/?';
+      }
+      if (tokens[tokens.length - 1] === '*') {
+        regexpSource += '$';
+      }
+      var match = pathname.match(new RegExp('^' + regexpSource, 'i'));
+      if (match == null) {
+        return null;
+      }
+      var matchedPath = match[0];
+      var remainingPathname = pathname.substr(matchedPath.length);
+      if (remainingPathname) {
+        if (matchedPath.charAt(matchedPath.length - 1) !== '/') {
+          return null;
+        }
+        remainingPathname = '/' + remainingPathname;
+      }
+      return {
+        remainingPathname: remainingPathname,
+        paramNames: paramNames,
+        paramValues: match.slice(1).map(function(v) {
+          return v && decodeURIComponent(v);
+        })
+      };
+    }
+    function getParamNames(pattern) {
+      return compilePattern(pattern).paramNames;
+    }
+    function getParams(pattern, pathname) {
+      var match = matchPattern(pattern, pathname);
+      if (!match) {
+        return null;
+      }
+      var paramNames = match.paramNames;
+      var paramValues = match.paramValues;
+      var params = {};
+      paramNames.forEach(function(paramName, index) {
+        params[paramName] = paramValues[index];
+      });
+      return params;
+    }
+    function formatPattern(pattern, params) {
+      params = params || {};
+      var _compilePattern3 = compilePattern(pattern);
+      var tokens = _compilePattern3.tokens;
+      var parenCount = 0,
+          pathname = '',
+          splatIndex = 0;
+      var token = void 0,
+          paramName = void 0,
+          paramValue = void 0;
+      for (var i = 0,
+          len = tokens.length; i < len; ++i) {
+        token = tokens[i];
+        if (token === '*' || token === '**') {
+          paramValue = Array.isArray(params.splat) ? params.splat[splatIndex++] : params.splat;
+          !(paramValue != null || parenCount > 0) ? "production" !== 'production' ? (0, _invariant2.default)(false, 'Missing splat #%s for path "%s"', splatIndex, pattern) : (0, _invariant2.default)(false) : void 0;
+          if (paramValue != null)
+            pathname += encodeURI(paramValue);
+        } else if (token === '(') {
+          parenCount += 1;
+        } else if (token === ')') {
+          parenCount -= 1;
+        } else if (token.charAt(0) === ':') {
+          paramName = token.substring(1);
+          paramValue = params[paramName];
+          !(paramValue != null || parenCount > 0) ? "production" !== 'production' ? (0, _invariant2.default)(false, 'Missing "%s" parameter for path "%s"', paramName, pattern) : (0, _invariant2.default)(false) : void 0;
+          if (paramValue != null)
+            pathname += encodeURIComponent(paramValue);
+        } else {
+          pathname += token;
+        }
+      }
+      return pathname.replace(/\/+/g, '/');
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/getRouteParams.js", ["./PatternUtils"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _PatternUtils = $__require('./PatternUtils');
+  function getRouteParams(route, params) {
+    var routeParams = {};
+    if (!route.path)
+      return routeParams;
+    var paramNames = (0, _PatternUtils.getParamNames)(route.path);
+    for (var p in params) {
+      if (Object.prototype.hasOwnProperty.call(params, p) && paramNames.indexOf(p) !== -1) {
+        routeParams[p] = params[p];
+      }
+    }
+    return routeParams;
+  }
+  exports.default = getRouteParams;
+  module.exports = exports['default'];
+  return module.exports;
+});
+
 System.registerDynamic("npm:react@15.1.0/lib/PooledClass.js", ["fbjs/lib/invariant", "process"], true, function($__require, exports, module) {
   ;
   var define,
@@ -12113,6 +14593,2092 @@ System.registerDynamic("npm:fbjs@0.8.3/lib/warning.js", ["./emptyFunction", "pro
   return module.exports;
 });
 
+System.registerDynamic("npm:react@15.1.0/lib/React.js", ["object-assign", "./ReactChildren", "./ReactComponent", "./ReactClass", "./ReactDOMFactories", "./ReactElement", "./ReactElementValidator", "./ReactPropTypes", "./ReactVersion", "./onlyChild", "fbjs/lib/warning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    var _assign = $__require('object-assign');
+    var ReactChildren = $__require('./ReactChildren');
+    var ReactComponent = $__require('./ReactComponent');
+    var ReactClass = $__require('./ReactClass');
+    var ReactDOMFactories = $__require('./ReactDOMFactories');
+    var ReactElement = $__require('./ReactElement');
+    var ReactElementValidator = $__require('./ReactElementValidator');
+    var ReactPropTypes = $__require('./ReactPropTypes');
+    var ReactVersion = $__require('./ReactVersion');
+    var onlyChild = $__require('./onlyChild');
+    var warning = $__require('fbjs/lib/warning');
+    var createElement = ReactElement.createElement;
+    var createFactory = ReactElement.createFactory;
+    var cloneElement = ReactElement.cloneElement;
+    if ("production" !== 'production') {
+      createElement = ReactElementValidator.createElement;
+      createFactory = ReactElementValidator.createFactory;
+      cloneElement = ReactElementValidator.cloneElement;
+    }
+    var __spread = _assign;
+    if ("production" !== 'production') {
+      var warned = false;
+      __spread = function() {
+        "production" !== 'production' ? warning(warned, 'React.__spread is deprecated and should not be used. Use ' + 'Object.assign directly or another helper function with similar ' + 'semantics. You may be seeing this warning due to your compiler. ' + 'See https://fb.me/react-spread-deprecation for more details.') : void 0;
+        warned = true;
+        return _assign.apply(null, arguments);
+      };
+    }
+    var React = {
+      Children: {
+        map: ReactChildren.map,
+        forEach: ReactChildren.forEach,
+        count: ReactChildren.count,
+        toArray: ReactChildren.toArray,
+        only: onlyChild
+      },
+      Component: ReactComponent,
+      createElement: createElement,
+      cloneElement: cloneElement,
+      isValidElement: ReactElement.isValidElement,
+      PropTypes: ReactPropTypes,
+      createClass: ReactClass.createClass,
+      createFactory: createFactory,
+      createMixin: function(mixin) {
+        return mixin;
+      },
+      DOM: ReactDOMFactories,
+      version: ReactVersion,
+      __spread: __spread
+    };
+    module.exports = React;
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react@15.1.0/react.js", ["./lib/React"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('./lib/React');
+  return module.exports;
+});
+
+System.registerDynamic("npm:react@15.1.0.js", ["npm:react@15.1.0/react.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:react@15.1.0/react.js');
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/RouteUtils.js", ["react", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    exports.isReactChildren = isReactChildren;
+    exports.createRouteFromReactElement = createRouteFromReactElement;
+    exports.createRoutesFromReactChildren = createRoutesFromReactChildren;
+    exports.createRoutes = createRoutes;
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    function isValidChild(object) {
+      return object == null || _react2.default.isValidElement(object);
+    }
+    function isReactChildren(object) {
+      return isValidChild(object) || Array.isArray(object) && object.every(isValidChild);
+    }
+    function checkPropTypes(componentName, propTypes, props) {
+      componentName = componentName || 'UnknownComponent';
+      for (var propName in propTypes) {
+        if (Object.prototype.hasOwnProperty.call(propTypes, propName)) {
+          var error = propTypes[propName](props, propName, componentName);
+          if (error instanceof Error)
+            "production" !== 'production' ? (0, _routerWarning2.default)(false, error.message) : void 0;
+        }
+      }
+    }
+    function createRoute(defaultProps, props) {
+      return _extends({}, defaultProps, props);
+    }
+    function createRouteFromReactElement(element) {
+      var type = element.type;
+      var route = createRoute(type.defaultProps, element.props);
+      if (type.propTypes)
+        checkPropTypes(type.displayName || type.name, type.propTypes, route);
+      if (route.children) {
+        var childRoutes = createRoutesFromReactChildren(route.children, route);
+        if (childRoutes.length)
+          route.childRoutes = childRoutes;
+        delete route.children;
+      }
+      return route;
+    }
+    function createRoutesFromReactChildren(children, parentRoute) {
+      var routes = [];
+      _react2.default.Children.forEach(children, function(element) {
+        if (_react2.default.isValidElement(element)) {
+          if (element.type.createRouteFromReactElement) {
+            var route = element.type.createRouteFromReactElement(element, parentRoute);
+            if (route)
+              routes.push(route);
+          } else {
+            routes.push(createRouteFromReactElement(element));
+          }
+        }
+      });
+      return routes;
+    }
+    function createRoutes(routes) {
+      if (isReactChildren(routes)) {
+        routes = createRoutesFromReactChildren(routes);
+      } else if (routes && !Array.isArray(routes)) {
+        routes = [routes];
+      }
+      return routes;
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/routerWarning.js", ["warning"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.default = routerWarning;
+  exports._resetWarned = _resetWarned;
+  var _warning = $__require('warning');
+  var _warning2 = _interopRequireDefault(_warning);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  var warned = {};
+  function routerWarning(falseToWarn, message) {
+    if (message.indexOf('deprecated') !== -1) {
+      if (warned[message]) {
+        return;
+      }
+      warned[message] = true;
+    }
+    message = '[react-router] ' + message;
+    for (var _len = arguments.length,
+        args = Array(_len > 2 ? _len - 2 : 0),
+        _key = 2; _key < _len; _key++) {
+      args[_key - 2] = arguments[_key];
+    }
+    _warning2.default.apply(undefined, [falseToWarn, message].concat(args));
+  }
+  function _resetWarned() {
+    warned = {};
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/RouterContext.js", ["invariant", "react", "./deprecateObjectProperties", "./getRouteParams", "./RouteUtils", "./routerWarning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+      return typeof obj;
+    } : function(obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+    };
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _react = $__require('react');
+    var _react2 = _interopRequireDefault(_react);
+    var _deprecateObjectProperties = $__require('./deprecateObjectProperties');
+    var _deprecateObjectProperties2 = _interopRequireDefault(_deprecateObjectProperties);
+    var _getRouteParams = $__require('./getRouteParams');
+    var _getRouteParams2 = _interopRequireDefault(_getRouteParams);
+    var _RouteUtils = $__require('./RouteUtils');
+    var _routerWarning = $__require('./routerWarning');
+    var _routerWarning2 = _interopRequireDefault(_routerWarning);
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {default: obj};
+    }
+    var _React$PropTypes = _react2.default.PropTypes;
+    var array = _React$PropTypes.array;
+    var func = _React$PropTypes.func;
+    var object = _React$PropTypes.object;
+    var RouterContext = _react2.default.createClass({
+      displayName: 'RouterContext',
+      propTypes: {
+        history: object,
+        router: object.isRequired,
+        location: object.isRequired,
+        routes: array.isRequired,
+        params: object.isRequired,
+        components: array.isRequired,
+        createElement: func.isRequired
+      },
+      getDefaultProps: function getDefaultProps() {
+        return {createElement: _react2.default.createElement};
+      },
+      childContextTypes: {
+        history: object,
+        location: object.isRequired,
+        router: object.isRequired
+      },
+      getChildContext: function getChildContext() {
+        var _props = this.props;
+        var router = _props.router;
+        var history = _props.history;
+        var location = _props.location;
+        if (!router) {
+          "production" !== 'production' ? (0, _routerWarning2.default)(false, '`<RouterContext>` expects a `router` rather than a `history`') : void 0;
+          router = _extends({}, history, {setRouteLeaveHook: history.listenBeforeLeavingRoute});
+          delete router.listenBeforeLeavingRoute;
+        }
+        if ("production" !== 'production') {
+          location = (0, _deprecateObjectProperties2.default)(location, '`context.location` is deprecated, please use a route component\'s `props.location` instead. http://tiny.cc/router-accessinglocation');
+        }
+        return {
+          history: history,
+          location: location,
+          router: router
+        };
+      },
+      createElement: function createElement(component, props) {
+        return component == null ? null : this.props.createElement(component, props);
+      },
+      render: function render() {
+        var _this = this;
+        var _props2 = this.props;
+        var history = _props2.history;
+        var location = _props2.location;
+        var routes = _props2.routes;
+        var params = _props2.params;
+        var components = _props2.components;
+        var element = null;
+        if (components) {
+          element = components.reduceRight(function(element, components, index) {
+            if (components == null)
+              return element;
+            var route = routes[index];
+            var routeParams = (0, _getRouteParams2.default)(route, params);
+            var props = {
+              history: history,
+              location: location,
+              params: params,
+              route: route,
+              routeParams: routeParams,
+              routes: routes
+            };
+            if ((0, _RouteUtils.isReactChildren)(element)) {
+              props.children = element;
+            } else if (element) {
+              for (var prop in element) {
+                if (Object.prototype.hasOwnProperty.call(element, prop))
+                  props[prop] = element[prop];
+              }
+            }
+            if ((typeof components === 'undefined' ? 'undefined' : _typeof(components)) === 'object') {
+              var elements = {};
+              for (var key in components) {
+                if (Object.prototype.hasOwnProperty.call(components, key)) {
+                  elements[key] = _this.createElement(components[key], _extends({key: key}, props));
+                }
+              }
+              return elements;
+            }
+            return _this.createElement(components, props);
+          }, element);
+        }
+        !(element === null || element === false || _react2.default.isValidElement(element)) ? "production" !== 'production' ? (0, _invariant2.default)(false, 'The root route must render a single element') : (0, _invariant2.default)(false) : void 0;
+        return element;
+      }
+    });
+    exports.default = RouterContext;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/applyRouterMiddleware.js", ["react", "./RouterContext"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _extends = Object.assign || function(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
+    }
+    return target;
+  };
+  var _react = $__require('react');
+  var _react2 = _interopRequireDefault(_react);
+  var _RouterContext = $__require('./RouterContext');
+  var _RouterContext2 = _interopRequireDefault(_RouterContext);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  exports.default = function() {
+    for (var _len = arguments.length,
+        middlewares = Array(_len),
+        _key = 0; _key < _len; _key++) {
+      middlewares[_key] = arguments[_key];
+    }
+    var withContext = middlewares.map(function(m) {
+      return m.renderRouterContext;
+    }).filter(function(f) {
+      return f;
+    });
+    var withComponent = middlewares.map(function(m) {
+      return m.renderRouteComponent;
+    }).filter(function(f) {
+      return f;
+    });
+    var makeCreateElement = function makeCreateElement() {
+      var baseCreateElement = arguments.length <= 0 || arguments[0] === undefined ? _react.createElement : arguments[0];
+      return function(Component, props) {
+        return withComponent.reduceRight(function(previous, renderRouteComponent) {
+          return renderRouteComponent(previous, props);
+        }, baseCreateElement(Component, props));
+      };
+    };
+    return function(renderProps) {
+      return withContext.reduceRight(function(previous, renderRouterContext) {
+        return renderRouterContext(previous, renderProps);
+      }, _react2.default.createElement(_RouterContext2.default, _extends({}, renderProps, {createElement: makeCreateElement(renderProps.createElement)})));
+    };
+  };
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/createBrowserHistory.js", ["invariant", "./Actions", "./PathUtils", "./ExecutionEnvironment", "./DOMUtils", "./DOMStateStorage", "./createDOMHistory", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _Actions = $__require('./Actions');
+    var _PathUtils = $__require('./PathUtils');
+    var _ExecutionEnvironment = $__require('./ExecutionEnvironment');
+    var _DOMUtils = $__require('./DOMUtils');
+    var _DOMStateStorage = $__require('./DOMStateStorage');
+    var _createDOMHistory = $__require('./createDOMHistory');
+    var _createDOMHistory2 = _interopRequireDefault(_createDOMHistory);
+    function createBrowserHistory() {
+      var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      !_ExecutionEnvironment.canUseDOM ? "production" !== 'production' ? _invariant2['default'](false, 'Browser history needs a DOM') : _invariant2['default'](false) : undefined;
+      var forceRefresh = options.forceRefresh;
+      var isSupported = _DOMUtils.supportsHistory();
+      var useRefresh = !isSupported || forceRefresh;
+      function getCurrentLocation(historyState) {
+        try {
+          historyState = historyState || window.history.state || {};
+        } catch (e) {
+          historyState = {};
+        }
+        var path = _DOMUtils.getWindowPath();
+        var _historyState = historyState;
+        var key = _historyState.key;
+        var state = undefined;
+        if (key) {
+          state = _DOMStateStorage.readState(key);
+        } else {
+          state = null;
+          key = history.createKey();
+          if (isSupported)
+            window.history.replaceState(_extends({}, historyState, {key: key}), null);
+        }
+        var location = _PathUtils.parsePath(path);
+        return history.createLocation(_extends({}, location, {state: state}), undefined, key);
+      }
+      function startPopStateListener(_ref) {
+        var transitionTo = _ref.transitionTo;
+        function popStateListener(event) {
+          if (event.state === undefined)
+            return;
+          transitionTo(getCurrentLocation(event.state));
+        }
+        _DOMUtils.addEventListener(window, 'popstate', popStateListener);
+        return function() {
+          _DOMUtils.removeEventListener(window, 'popstate', popStateListener);
+        };
+      }
+      function finishTransition(location) {
+        var basename = location.basename;
+        var pathname = location.pathname;
+        var search = location.search;
+        var hash = location.hash;
+        var state = location.state;
+        var action = location.action;
+        var key = location.key;
+        if (action === _Actions.POP)
+          return;
+        _DOMStateStorage.saveState(key, state);
+        var path = (basename || '') + pathname + search + hash;
+        var historyState = {key: key};
+        if (action === _Actions.PUSH) {
+          if (useRefresh) {
+            window.location.href = path;
+            return false;
+          } else {
+            window.history.pushState(historyState, null, path);
+          }
+        } else {
+          if (useRefresh) {
+            window.location.replace(path);
+            return false;
+          } else {
+            window.history.replaceState(historyState, null, path);
+          }
+        }
+      }
+      var history = _createDOMHistory2['default'](_extends({}, options, {
+        getCurrentLocation: getCurrentLocation,
+        finishTransition: finishTransition,
+        saveState: _DOMStateStorage.saveState
+      }));
+      var listenerCount = 0,
+          stopPopStateListener = undefined;
+      function listenBefore(listener) {
+        if (++listenerCount === 1)
+          stopPopStateListener = startPopStateListener(history);
+        var unlisten = history.listenBefore(listener);
+        return function() {
+          unlisten();
+          if (--listenerCount === 0)
+            stopPopStateListener();
+        };
+      }
+      function listen(listener) {
+        if (++listenerCount === 1)
+          stopPopStateListener = startPopStateListener(history);
+        var unlisten = history.listen(listener);
+        return function() {
+          unlisten();
+          if (--listenerCount === 0)
+            stopPopStateListener();
+        };
+      }
+      function registerTransitionHook(hook) {
+        if (++listenerCount === 1)
+          stopPopStateListener = startPopStateListener(history);
+        history.registerTransitionHook(hook);
+      }
+      function unregisterTransitionHook(hook) {
+        history.unregisterTransitionHook(hook);
+        if (--listenerCount === 0)
+          stopPopStateListener();
+      }
+      return _extends({}, history, {
+        listenBefore: listenBefore,
+        listen: listen,
+        registerTransitionHook: registerTransitionHook,
+        unregisterTransitionHook: unregisterTransitionHook
+      });
+    }
+    exports['default'] = createBrowserHistory;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/browserHistory.js", ["history/lib/createBrowserHistory", "./createRouterHistory"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _createBrowserHistory = $__require('history/lib/createBrowserHistory');
+  var _createBrowserHistory2 = _interopRequireDefault(_createBrowserHistory);
+  var _createRouterHistory = $__require('./createRouterHistory');
+  var _createRouterHistory2 = _interopRequireDefault(_createRouterHistory);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  exports.default = (0, _createRouterHistory2.default)(_createBrowserHistory2.default);
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/DOMStateStorage.js", ["warning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.saveState = saveState;
+    exports.readState = readState;
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var KeyPrefix = '@@History/';
+    var QuotaExceededErrors = ['QuotaExceededError', 'QUOTA_EXCEEDED_ERR'];
+    var SecurityError = 'SecurityError';
+    function createKey(key) {
+      return KeyPrefix + key;
+    }
+    function saveState(key, state) {
+      try {
+        if (state == null) {
+          window.sessionStorage.removeItem(createKey(key));
+        } else {
+          window.sessionStorage.setItem(createKey(key), JSON.stringify(state));
+        }
+      } catch (error) {
+        if (error.name === SecurityError) {
+          "production" !== 'production' ? _warning2['default'](false, '[history] Unable to save state; sessionStorage is not available due to security settings') : undefined;
+          return;
+        }
+        if (QuotaExceededErrors.indexOf(error.name) >= 0 && window.sessionStorage.length === 0) {
+          "production" !== 'production' ? _warning2['default'](false, '[history] Unable to save state; sessionStorage is not available in Safari private mode') : undefined;
+          return;
+        }
+        throw error;
+      }
+    }
+    function readState(key) {
+      var json = undefined;
+      try {
+        json = window.sessionStorage.getItem(createKey(key));
+      } catch (error) {
+        if (error.name === SecurityError) {
+          "production" !== 'production' ? _warning2['default'](false, '[history] Unable to read state; sessionStorage is not available due to security settings') : undefined;
+          return null;
+        }
+      }
+      if (json) {
+        try {
+          return JSON.parse(json);
+        } catch (error) {}
+      }
+      return null;
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/DOMUtils.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.addEventListener = addEventListener;
+  exports.removeEventListener = removeEventListener;
+  exports.getHashPath = getHashPath;
+  exports.replaceHashPath = replaceHashPath;
+  exports.getWindowPath = getWindowPath;
+  exports.go = go;
+  exports.getUserConfirmation = getUserConfirmation;
+  exports.supportsHistory = supportsHistory;
+  exports.supportsGoWithoutReloadUsingHash = supportsGoWithoutReloadUsingHash;
+  function addEventListener(node, event, listener) {
+    if (node.addEventListener) {
+      node.addEventListener(event, listener, false);
+    } else {
+      node.attachEvent('on' + event, listener);
+    }
+  }
+  function removeEventListener(node, event, listener) {
+    if (node.removeEventListener) {
+      node.removeEventListener(event, listener, false);
+    } else {
+      node.detachEvent('on' + event, listener);
+    }
+  }
+  function getHashPath() {
+    return window.location.href.split('#')[1] || '';
+  }
+  function replaceHashPath(path) {
+    window.location.replace(window.location.pathname + window.location.search + '#' + path);
+  }
+  function getWindowPath() {
+    return window.location.pathname + window.location.search + window.location.hash;
+  }
+  function go(n) {
+    if (n)
+      window.history.go(n);
+  }
+  function getUserConfirmation(message, callback) {
+    callback(window.confirm(message));
+  }
+  function supportsHistory() {
+    var ua = navigator.userAgent;
+    if ((ua.indexOf('Android 2.') !== -1 || ua.indexOf('Android 4.0') !== -1) && ua.indexOf('Mobile Safari') !== -1 && ua.indexOf('Chrome') === -1 && ua.indexOf('Windows Phone') === -1) {
+      return false;
+    }
+    return window.history && 'pushState' in window.history;
+  }
+  function supportsGoWithoutReloadUsingHash() {
+    var ua = navigator.userAgent;
+    return ua.indexOf('Firefox') === -1;
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/createDOMHistory.js", ["invariant", "./ExecutionEnvironment", "./DOMUtils", "./createHistory", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _ExecutionEnvironment = $__require('./ExecutionEnvironment');
+    var _DOMUtils = $__require('./DOMUtils');
+    var _createHistory = $__require('./createHistory');
+    var _createHistory2 = _interopRequireDefault(_createHistory);
+    function createDOMHistory(options) {
+      var history = _createHistory2['default'](_extends({getUserConfirmation: _DOMUtils.getUserConfirmation}, options, {go: _DOMUtils.go}));
+      function listen(listener) {
+        !_ExecutionEnvironment.canUseDOM ? "production" !== 'production' ? _invariant2['default'](false, 'DOM history needs a DOM') : _invariant2['default'](false) : undefined;
+        return history.listen(listener);
+      }
+      return _extends({}, history, {listen: listen});
+    }
+    exports['default'] = createDOMHistory;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/createHashHistory.js", ["warning", "invariant", "./Actions", "./PathUtils", "./ExecutionEnvironment", "./DOMUtils", "./DOMStateStorage", "./createDOMHistory", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _Actions = $__require('./Actions');
+    var _PathUtils = $__require('./PathUtils');
+    var _ExecutionEnvironment = $__require('./ExecutionEnvironment');
+    var _DOMUtils = $__require('./DOMUtils');
+    var _DOMStateStorage = $__require('./DOMStateStorage');
+    var _createDOMHistory = $__require('./createDOMHistory');
+    var _createDOMHistory2 = _interopRequireDefault(_createDOMHistory);
+    function isAbsolutePath(path) {
+      return typeof path === 'string' && path.charAt(0) === '/';
+    }
+    function ensureSlash() {
+      var path = _DOMUtils.getHashPath();
+      if (isAbsolutePath(path))
+        return true;
+      _DOMUtils.replaceHashPath('/' + path);
+      return false;
+    }
+    function addQueryStringValueToPath(path, key, value) {
+      return path + (path.indexOf('?') === -1 ? '?' : '&') + (key + '=' + value);
+    }
+    function stripQueryStringValueFromPath(path, key) {
+      return path.replace(new RegExp('[?&]?' + key + '=[a-zA-Z0-9]+'), '');
+    }
+    function getQueryStringValueFromPath(path, key) {
+      var match = path.match(new RegExp('\\?.*?\\b' + key + '=(.+?)\\b'));
+      return match && match[1];
+    }
+    var DefaultQueryKey = '_k';
+    function createHashHistory() {
+      var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      !_ExecutionEnvironment.canUseDOM ? "production" !== 'production' ? _invariant2['default'](false, 'Hash history needs a DOM') : _invariant2['default'](false) : undefined;
+      var queryKey = options.queryKey;
+      if (queryKey === undefined || !!queryKey)
+        queryKey = typeof queryKey === 'string' ? queryKey : DefaultQueryKey;
+      function getCurrentLocation() {
+        var path = _DOMUtils.getHashPath();
+        var key = undefined,
+            state = undefined;
+        if (queryKey) {
+          key = getQueryStringValueFromPath(path, queryKey);
+          path = stripQueryStringValueFromPath(path, queryKey);
+          if (key) {
+            state = _DOMStateStorage.readState(key);
+          } else {
+            state = null;
+            key = history.createKey();
+            _DOMUtils.replaceHashPath(addQueryStringValueToPath(path, queryKey, key));
+          }
+        } else {
+          key = state = null;
+        }
+        var location = _PathUtils.parsePath(path);
+        return history.createLocation(_extends({}, location, {state: state}), undefined, key);
+      }
+      function startHashChangeListener(_ref) {
+        var transitionTo = _ref.transitionTo;
+        function hashChangeListener() {
+          if (!ensureSlash())
+            return;
+          transitionTo(getCurrentLocation());
+        }
+        ensureSlash();
+        _DOMUtils.addEventListener(window, 'hashchange', hashChangeListener);
+        return function() {
+          _DOMUtils.removeEventListener(window, 'hashchange', hashChangeListener);
+        };
+      }
+      function finishTransition(location) {
+        var basename = location.basename;
+        var pathname = location.pathname;
+        var search = location.search;
+        var state = location.state;
+        var action = location.action;
+        var key = location.key;
+        if (action === _Actions.POP)
+          return;
+        var path = (basename || '') + pathname + search;
+        if (queryKey) {
+          path = addQueryStringValueToPath(path, queryKey, key);
+          _DOMStateStorage.saveState(key, state);
+        } else {
+          location.key = location.state = null;
+        }
+        var currentHash = _DOMUtils.getHashPath();
+        if (action === _Actions.PUSH) {
+          if (currentHash !== path) {
+            window.location.hash = path;
+          } else {
+            "production" !== 'production' ? _warning2['default'](false, 'You cannot PUSH the same path using hash history') : undefined;
+          }
+        } else if (currentHash !== path) {
+          _DOMUtils.replaceHashPath(path);
+        }
+      }
+      var history = _createDOMHistory2['default'](_extends({}, options, {
+        getCurrentLocation: getCurrentLocation,
+        finishTransition: finishTransition,
+        saveState: _DOMStateStorage.saveState
+      }));
+      var listenerCount = 0,
+          stopHashChangeListener = undefined;
+      function listenBefore(listener) {
+        if (++listenerCount === 1)
+          stopHashChangeListener = startHashChangeListener(history);
+        var unlisten = history.listenBefore(listener);
+        return function() {
+          unlisten();
+          if (--listenerCount === 0)
+            stopHashChangeListener();
+        };
+      }
+      function listen(listener) {
+        if (++listenerCount === 1)
+          stopHashChangeListener = startHashChangeListener(history);
+        var unlisten = history.listen(listener);
+        return function() {
+          unlisten();
+          if (--listenerCount === 0)
+            stopHashChangeListener();
+        };
+      }
+      function push(location) {
+        "production" !== 'production' ? _warning2['default'](queryKey || location.state == null, 'You cannot use state without a queryKey it will be dropped') : undefined;
+        history.push(location);
+      }
+      function replace(location) {
+        "production" !== 'production' ? _warning2['default'](queryKey || location.state == null, 'You cannot use state without a queryKey it will be dropped') : undefined;
+        history.replace(location);
+      }
+      var goIsSupportedWithoutReload = _DOMUtils.supportsGoWithoutReloadUsingHash();
+      function go(n) {
+        "production" !== 'production' ? _warning2['default'](goIsSupportedWithoutReload, 'Hash history go(n) causes a full page reload in this browser') : undefined;
+        history.go(n);
+      }
+      function createHref(path) {
+        return '#' + history.createHref(path);
+      }
+      function registerTransitionHook(hook) {
+        if (++listenerCount === 1)
+          stopHashChangeListener = startHashChangeListener(history);
+        history.registerTransitionHook(hook);
+      }
+      function unregisterTransitionHook(hook) {
+        history.unregisterTransitionHook(hook);
+        if (--listenerCount === 0)
+          stopHashChangeListener();
+      }
+      function pushState(state, path) {
+        "production" !== 'production' ? _warning2['default'](queryKey || state == null, 'You cannot use state without a queryKey it will be dropped') : undefined;
+        history.pushState(state, path);
+      }
+      function replaceState(state, path) {
+        "production" !== 'production' ? _warning2['default'](queryKey || state == null, 'You cannot use state without a queryKey it will be dropped') : undefined;
+        history.replaceState(state, path);
+      }
+      return _extends({}, history, {
+        listenBefore: listenBefore,
+        listen: listen,
+        push: push,
+        replace: replace,
+        go: go,
+        createHref: createHref,
+        registerTransitionHook: registerTransitionHook,
+        unregisterTransitionHook: unregisterTransitionHook,
+        pushState: pushState,
+        replaceState: replaceState
+      });
+    }
+    exports['default'] = createHashHistory;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/useRouterHistory.js", ["history/lib/useQueries", "history/lib/useBasename"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.default = useRouterHistory;
+  var _useQueries = $__require('history/lib/useQueries');
+  var _useQueries2 = _interopRequireDefault(_useQueries);
+  var _useBasename = $__require('history/lib/useBasename');
+  var _useBasename2 = _interopRequireDefault(_useBasename);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  function useRouterHistory(createHistory) {
+    return function(options) {
+      var history = (0, _useQueries2.default)((0, _useBasename2.default)(createHistory))(options);
+      history.__v2_compatible__ = true;
+      return history;
+    };
+  }
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/createRouterHistory.js", ["./useRouterHistory"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  exports.default = function(createHistory) {
+    var history = void 0;
+    if (canUseDOM)
+      history = (0, _useRouterHistory2.default)(createHistory)();
+    return history;
+  };
+  var _useRouterHistory = $__require('./useRouterHistory');
+  var _useRouterHistory2 = _interopRequireDefault(_useRouterHistory);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1/lib/hashHistory.js", ["history/lib/createHashHistory", "./createRouterHistory"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _createHashHistory = $__require('history/lib/createHashHistory');
+  var _createHashHistory2 = _interopRequireDefault(_createHashHistory);
+  var _createRouterHistory = $__require('./createRouterHistory');
+  var _createRouterHistory2 = _interopRequireDefault(_createRouterHistory);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  exports.default = (0, _createRouterHistory2.default)(_createHashHistory2.default);
+  module.exports = exports['default'];
+  return module.exports;
+});
+
+System.registerDynamic("npm:strict-uri-encode@1.1.0/index.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = function(str) {
+    return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+      return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+    });
+  };
+  return module.exports;
+});
+
+System.registerDynamic("npm:strict-uri-encode@1.1.0.js", ["npm:strict-uri-encode@1.1.0/index"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:strict-uri-encode@1.1.0/index');
+  return module.exports;
+});
+
+System.registerDynamic("npm:query-string@3.0.3/index.js", ["strict-uri-encode"], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  var strictUriEncode = $__require('strict-uri-encode');
+  exports.extract = function(str) {
+    return str.split('?')[1] || '';
+  };
+  exports.parse = function(str) {
+    if (typeof str !== 'string') {
+      return {};
+    }
+    str = str.trim().replace(/^(\?|#|&)/, '');
+    if (!str) {
+      return {};
+    }
+    return str.split('&').reduce(function(ret, param) {
+      var parts = param.replace(/\+/g, ' ').split('=');
+      var key = parts.shift();
+      var val = parts.length > 0 ? parts.join('=') : undefined;
+      key = decodeURIComponent(key);
+      val = val === undefined ? null : decodeURIComponent(val);
+      if (!ret.hasOwnProperty(key)) {
+        ret[key] = val;
+      } else if (Array.isArray(ret[key])) {
+        ret[key].push(val);
+      } else {
+        ret[key] = [ret[key], val];
+      }
+      return ret;
+    }, {});
+  };
+  exports.stringify = function(obj) {
+    return obj ? Object.keys(obj).sort().map(function(key) {
+      var val = obj[key];
+      if (val === undefined) {
+        return '';
+      }
+      if (val === null) {
+        return key;
+      }
+      if (Array.isArray(val)) {
+        return val.slice().sort().map(function(val2) {
+          return strictUriEncode(key) + '=' + strictUriEncode(val2);
+        }).join('&');
+      }
+      return strictUriEncode(key) + '=' + strictUriEncode(val);
+    }).filter(function(x) {
+      return x.length > 0;
+    }).join('&') : '';
+  };
+  return module.exports;
+});
+
+System.registerDynamic("npm:query-string@3.0.3.js", ["npm:query-string@3.0.3/index"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:query-string@3.0.3/index');
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/useQueries.js", ["warning", "query-string", "./runTransitionHook", "./PathUtils", "./deprecate", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _queryString = $__require('query-string');
+    var _runTransitionHook = $__require('./runTransitionHook');
+    var _runTransitionHook2 = _interopRequireDefault(_runTransitionHook);
+    var _PathUtils = $__require('./PathUtils');
+    var _deprecate = $__require('./deprecate');
+    var _deprecate2 = _interopRequireDefault(_deprecate);
+    var SEARCH_BASE_KEY = '$searchBase';
+    function defaultStringifyQuery(query) {
+      return _queryString.stringify(query).replace(/%20/g, '+');
+    }
+    var defaultParseQueryString = _queryString.parse;
+    function isNestedObject(object) {
+      for (var p in object) {
+        if (Object.prototype.hasOwnProperty.call(object, p) && typeof object[p] === 'object' && !Array.isArray(object[p]) && object[p] !== null)
+          return true;
+      }
+      return false;
+    }
+    function useQueries(createHistory) {
+      return function() {
+        var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+        var history = createHistory(options);
+        var stringifyQuery = options.stringifyQuery;
+        var parseQueryString = options.parseQueryString;
+        if (typeof stringifyQuery !== 'function')
+          stringifyQuery = defaultStringifyQuery;
+        if (typeof parseQueryString !== 'function')
+          parseQueryString = defaultParseQueryString;
+        function addQuery(location) {
+          if (location.query == null) {
+            var search = location.search;
+            location.query = parseQueryString(search.substring(1));
+            location[SEARCH_BASE_KEY] = {
+              search: search,
+              searchBase: ''
+            };
+          }
+          return location;
+        }
+        function appendQuery(location, query) {
+          var _extends2;
+          var searchBaseSpec = location[SEARCH_BASE_KEY];
+          var queryString = query ? stringifyQuery(query) : '';
+          if (!searchBaseSpec && !queryString) {
+            return location;
+          }
+          "production" !== 'production' ? _warning2['default'](stringifyQuery !== defaultStringifyQuery || !isNestedObject(query), 'useQueries does not stringify nested query objects by default; ' + 'use a custom stringifyQuery function') : undefined;
+          if (typeof location === 'string')
+            location = _PathUtils.parsePath(location);
+          var searchBase = undefined;
+          if (searchBaseSpec && location.search === searchBaseSpec.search) {
+            searchBase = searchBaseSpec.searchBase;
+          } else {
+            searchBase = location.search || '';
+          }
+          var search = searchBase;
+          if (queryString) {
+            search += (search ? '&' : '?') + queryString;
+          }
+          return _extends({}, location, (_extends2 = {search: search}, _extends2[SEARCH_BASE_KEY] = {
+            search: search,
+            searchBase: searchBase
+          }, _extends2));
+        }
+        function listenBefore(hook) {
+          return history.listenBefore(function(location, callback) {
+            _runTransitionHook2['default'](hook, addQuery(location), callback);
+          });
+        }
+        function listen(listener) {
+          return history.listen(function(location) {
+            listener(addQuery(location));
+          });
+        }
+        function push(location) {
+          history.push(appendQuery(location, location.query));
+        }
+        function replace(location) {
+          history.replace(appendQuery(location, location.query));
+        }
+        function createPath(location, query) {
+          "production" !== 'production' ? _warning2['default'](!query, 'the query argument to createPath is deprecated; use a location descriptor instead') : undefined;
+          return history.createPath(appendQuery(location, query || location.query));
+        }
+        function createHref(location, query) {
+          "production" !== 'production' ? _warning2['default'](!query, 'the query argument to createHref is deprecated; use a location descriptor instead') : undefined;
+          return history.createHref(appendQuery(location, query || location.query));
+        }
+        function createLocation(location) {
+          for (var _len = arguments.length,
+              args = Array(_len > 1 ? _len - 1 : 0),
+              _key = 1; _key < _len; _key++) {
+            args[_key - 1] = arguments[_key];
+          }
+          var fullLocation = history.createLocation.apply(history, [appendQuery(location, location.query)].concat(args));
+          if (location.query) {
+            fullLocation.query = location.query;
+          }
+          return addQuery(fullLocation);
+        }
+        function pushState(state, path, query) {
+          if (typeof path === 'string')
+            path = _PathUtils.parsePath(path);
+          push(_extends({state: state}, path, {query: query}));
+        }
+        function replaceState(state, path, query) {
+          if (typeof path === 'string')
+            path = _PathUtils.parsePath(path);
+          replace(_extends({state: state}, path, {query: query}));
+        }
+        return _extends({}, history, {
+          listenBefore: listenBefore,
+          listen: listen,
+          push: push,
+          replace: replace,
+          createPath: createPath,
+          createHref: createHref,
+          createLocation: createLocation,
+          pushState: _deprecate2['default'](pushState, 'pushState is deprecated; use push instead'),
+          replaceState: _deprecate2['default'](replaceState, 'replaceState is deprecated; use replace instead')
+        });
+      };
+    }
+    exports['default'] = useQueries;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/ExecutionEnvironment.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+  exports.canUseDOM = canUseDOM;
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/useBasename.js", ["warning", "./ExecutionEnvironment", "./PathUtils", "./runTransitionHook", "./deprecate", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _ExecutionEnvironment = $__require('./ExecutionEnvironment');
+    var _PathUtils = $__require('./PathUtils');
+    var _runTransitionHook = $__require('./runTransitionHook');
+    var _runTransitionHook2 = _interopRequireDefault(_runTransitionHook);
+    var _deprecate = $__require('./deprecate');
+    var _deprecate2 = _interopRequireDefault(_deprecate);
+    function useBasename(createHistory) {
+      return function() {
+        var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+        var history = createHistory(options);
+        var basename = options.basename;
+        var checkedBaseHref = false;
+        function checkBaseHref() {
+          if (checkedBaseHref) {
+            return;
+          }
+          if (basename == null && _ExecutionEnvironment.canUseDOM) {
+            var base = document.getElementsByTagName('base')[0];
+            var baseHref = base && base.getAttribute('href');
+            if (baseHref != null) {
+              basename = baseHref;
+              "production" !== 'production' ? _warning2['default'](false, 'Automatically setting basename using <base href> is deprecated and will ' + 'be removed in the next major release. The semantics of <base href> are ' + 'subtly different from basename. Please pass the basename explicitly in ' + 'the options to createHistory') : undefined;
+            }
+          }
+          checkedBaseHref = true;
+        }
+        function addBasename(location) {
+          checkBaseHref();
+          if (basename && location.basename == null) {
+            if (location.pathname.indexOf(basename) === 0) {
+              location.pathname = location.pathname.substring(basename.length);
+              location.basename = basename;
+              if (location.pathname === '')
+                location.pathname = '/';
+            } else {
+              location.basename = '';
+            }
+          }
+          return location;
+        }
+        function prependBasename(location) {
+          checkBaseHref();
+          if (!basename)
+            return location;
+          if (typeof location === 'string')
+            location = _PathUtils.parsePath(location);
+          var pname = location.pathname;
+          var normalizedBasename = basename.slice(-1) === '/' ? basename : basename + '/';
+          var normalizedPathname = pname.charAt(0) === '/' ? pname.slice(1) : pname;
+          var pathname = normalizedBasename + normalizedPathname;
+          return _extends({}, location, {pathname: pathname});
+        }
+        function listenBefore(hook) {
+          return history.listenBefore(function(location, callback) {
+            _runTransitionHook2['default'](hook, addBasename(location), callback);
+          });
+        }
+        function listen(listener) {
+          return history.listen(function(location) {
+            listener(addBasename(location));
+          });
+        }
+        function push(location) {
+          history.push(prependBasename(location));
+        }
+        function replace(location) {
+          history.replace(prependBasename(location));
+        }
+        function createPath(location) {
+          return history.createPath(prependBasename(location));
+        }
+        function createHref(location) {
+          return history.createHref(prependBasename(location));
+        }
+        function createLocation(location) {
+          for (var _len = arguments.length,
+              args = Array(_len > 1 ? _len - 1 : 0),
+              _key = 1; _key < _len; _key++) {
+            args[_key - 1] = arguments[_key];
+          }
+          return addBasename(history.createLocation.apply(history, [prependBasename(location)].concat(args)));
+        }
+        function pushState(state, path) {
+          if (typeof path === 'string')
+            path = _PathUtils.parsePath(path);
+          push(_extends({state: state}, path));
+        }
+        function replaceState(state, path) {
+          if (typeof path === 'string')
+            path = _PathUtils.parsePath(path);
+          replace(_extends({state: state}, path));
+        }
+        return _extends({}, history, {
+          listenBefore: listenBefore,
+          listen: listen,
+          push: push,
+          replace: replace,
+          createPath: createPath,
+          createHref: createHref,
+          createLocation: createLocation,
+          pushState: _deprecate2['default'](pushState, 'pushState is deprecated; use push instead'),
+          replaceState: _deprecate2['default'](replaceState, 'replaceState is deprecated; use replace instead')
+        });
+      };
+    }
+    exports['default'] = useBasename;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:invariant@2.2.1/browser.js", ["process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    var invariant = function(condition, format, a, b, c, d, e, f) {
+      if ("production" !== 'production') {
+        if (format === undefined) {
+          throw new Error('invariant requires an error message argument');
+        }
+      }
+      if (!condition) {
+        var error;
+        if (format === undefined) {
+          error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
+        } else {
+          var args = [a, b, c, d, e, f];
+          var argIndex = 0;
+          error = new Error(format.replace(/%s/g, function() {
+            return args[argIndex++];
+          }));
+          error.name = 'Invariant Violation';
+        }
+        error.framesToPop = 1;
+        throw error;
+      }
+    };
+    module.exports = invariant;
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:invariant@2.2.1.js", ["npm:invariant@2.2.1/browser.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:invariant@2.2.1/browser.js');
+  return module.exports;
+});
+
+System.registerDynamic("npm:deep-equal@1.0.1/lib/keys.js", [], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports = module.exports = typeof Object.keys === 'function' ? Object.keys : shim;
+  exports.shim = shim;
+  function shim(obj) {
+    var keys = [];
+    for (var key in obj)
+      keys.push(key);
+    return keys;
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:deep-equal@1.0.1/lib/is_arguments.js", [], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  var supportsArgumentsClass = (function() {
+    return Object.prototype.toString.call(arguments);
+  })() == '[object Arguments]';
+  exports = module.exports = supportsArgumentsClass ? supported : unsupported;
+  exports.supported = supported;
+  function supported(object) {
+    return Object.prototype.toString.call(object) == '[object Arguments]';
+  }
+  ;
+  exports.unsupported = unsupported;
+  function unsupported(object) {
+    return object && typeof object == 'object' && typeof object.length == 'number' && Object.prototype.hasOwnProperty.call(object, 'callee') && !Object.prototype.propertyIsEnumerable.call(object, 'callee') || false;
+  }
+  ;
+  return module.exports;
+});
+
+System.registerDynamic("npm:deep-equal@1.0.1/index.js", ["./lib/keys", "./lib/is_arguments"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  var pSlice = Array.prototype.slice;
+  var objectKeys = $__require('./lib/keys');
+  var isArguments = $__require('./lib/is_arguments');
+  var deepEqual = module.exports = function(actual, expected, opts) {
+    if (!opts)
+      opts = {};
+    if (actual === expected) {
+      return true;
+    } else if (actual instanceof Date && expected instanceof Date) {
+      return actual.getTime() === expected.getTime();
+    } else if (!actual || !expected || typeof actual != 'object' && typeof expected != 'object') {
+      return opts.strict ? actual === expected : actual == expected;
+    } else {
+      return objEquiv(actual, expected, opts);
+    }
+  };
+  function isUndefinedOrNull(value) {
+    return value === null || value === undefined;
+  }
+  function isBuffer(x) {
+    if (!x || typeof x !== 'object' || typeof x.length !== 'number')
+      return false;
+    if (typeof x.copy !== 'function' || typeof x.slice !== 'function') {
+      return false;
+    }
+    if (x.length > 0 && typeof x[0] !== 'number')
+      return false;
+    return true;
+  }
+  function objEquiv(a, b, opts) {
+    var i,
+        key;
+    if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+      return false;
+    if (a.prototype !== b.prototype)
+      return false;
+    if (isArguments(a)) {
+      if (!isArguments(b)) {
+        return false;
+      }
+      a = pSlice.call(a);
+      b = pSlice.call(b);
+      return deepEqual(a, b, opts);
+    }
+    if (isBuffer(a)) {
+      if (!isBuffer(b)) {
+        return false;
+      }
+      if (a.length !== b.length)
+        return false;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] !== b[i])
+          return false;
+      }
+      return true;
+    }
+    try {
+      var ka = objectKeys(a),
+          kb = objectKeys(b);
+    } catch (e) {
+      return false;
+    }
+    if (ka.length != kb.length)
+      return false;
+    ka.sort();
+    kb.sort();
+    for (i = ka.length - 1; i >= 0; i--) {
+      if (ka[i] != kb[i])
+        return false;
+    }
+    for (i = ka.length - 1; i >= 0; i--) {
+      key = ka[i];
+      if (!deepEqual(a[key], b[key], opts))
+        return false;
+    }
+    return typeof a === typeof b;
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:deep-equal@1.0.1.js", ["npm:deep-equal@1.0.1/index.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:deep-equal@1.0.1/index.js');
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/AsyncUtils.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var _slice = Array.prototype.slice;
+  exports.loopAsync = loopAsync;
+  function loopAsync(turns, work, callback) {
+    var currentTurn = 0,
+        isDone = false;
+    var sync = false,
+        hasNext = false,
+        doneArgs = undefined;
+    function done() {
+      isDone = true;
+      if (sync) {
+        doneArgs = [].concat(_slice.call(arguments));
+        return;
+      }
+      callback.apply(this, arguments);
+    }
+    function next() {
+      if (isDone) {
+        return;
+      }
+      hasNext = true;
+      if (sync) {
+        return;
+      }
+      sync = true;
+      while (!isDone && currentTurn < turns && hasNext) {
+        hasNext = false;
+        work.call(this, currentTurn++, next, done);
+      }
+      sync = false;
+      if (isDone) {
+        callback.apply(this, doneArgs);
+        return;
+      }
+      if (currentTurn >= turns && hasNext) {
+        isDone = true;
+        callback();
+      }
+    }
+    next();
+  }
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/Actions.js", [], true, function($__require, exports, module) {
+  "use strict";
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  exports.__esModule = true;
+  var PUSH = 'PUSH';
+  exports.PUSH = PUSH;
+  var REPLACE = 'REPLACE';
+  exports.REPLACE = REPLACE;
+  var POP = 'POP';
+  exports.POP = POP;
+  exports['default'] = {
+    PUSH: PUSH,
+    REPLACE: REPLACE,
+    POP: POP
+  };
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/PathUtils.js", ["warning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    exports.extractPath = extractPath;
+    exports.parsePath = parsePath;
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    function extractPath(string) {
+      var match = string.match(/^https?:\/\/[^\/]*/);
+      if (match == null)
+        return string;
+      return string.substring(match[0].length);
+    }
+    function parsePath(path) {
+      var pathname = extractPath(path);
+      var search = '';
+      var hash = '';
+      "production" !== 'production' ? _warning2['default'](path === pathname, 'A path must be pathname + search + hash only, not a fully qualified URL like "%s"', path) : undefined;
+      var hashIndex = pathname.indexOf('#');
+      if (hashIndex !== -1) {
+        hash = pathname.substring(hashIndex);
+        pathname = pathname.substring(0, hashIndex);
+      }
+      var searchIndex = pathname.indexOf('?');
+      if (searchIndex !== -1) {
+        search = pathname.substring(searchIndex);
+        pathname = pathname.substring(0, searchIndex);
+      }
+      if (pathname === '')
+        pathname = '/';
+      return {
+        pathname: pathname,
+        search: search,
+        hash: hash
+      };
+    }
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/createLocation.js", ["warning", "./Actions", "./PathUtils", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _Actions = $__require('./Actions');
+    var _PathUtils = $__require('./PathUtils');
+    function createLocation() {
+      var location = arguments.length <= 0 || arguments[0] === undefined ? '/' : arguments[0];
+      var action = arguments.length <= 1 || arguments[1] === undefined ? _Actions.POP : arguments[1];
+      var key = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+      var _fourthArg = arguments.length <= 3 || arguments[3] === undefined ? null : arguments[3];
+      if (typeof location === 'string')
+        location = _PathUtils.parsePath(location);
+      if (typeof action === 'object') {
+        "production" !== 'production' ? _warning2['default'](false, 'The state (2nd) argument to createLocation is deprecated; use a ' + 'location descriptor instead') : undefined;
+        location = _extends({}, location, {state: action});
+        action = key || _Actions.POP;
+        key = _fourthArg;
+      }
+      var pathname = location.pathname || '/';
+      var search = location.search || '';
+      var hash = location.hash || '';
+      var state = location.state || null;
+      return {
+        pathname: pathname,
+        search: search,
+        hash: hash,
+        state: state,
+        action: action,
+        key: key
+      };
+    }
+    exports['default'] = createLocation;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/runTransitionHook.js", ["warning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    function runTransitionHook(hook, location, callback) {
+      var result = hook(location, callback);
+      if (hook.length < 2) {
+        callback(result);
+      } else {
+        "production" !== 'production' ? _warning2['default'](result === undefined, 'You should not "return" in a transition hook with a callback argument; call the callback instead') : undefined;
+      }
+    }
+    exports['default'] = runTransitionHook;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:warning@2.1.0/browser.js", ["process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    var warning = function() {};
+    if ("production" !== 'production') {
+      warning = function(condition, format, args) {
+        var len = arguments.length;
+        args = new Array(len > 2 ? len - 2 : 0);
+        for (var key = 2; key < len; key++) {
+          args[key - 2] = arguments[key];
+        }
+        if (format === undefined) {
+          throw new Error('`warning(condition, format, ...args)` requires a warning ' + 'message argument');
+        }
+        if (format.length < 10 || (/^[s\W]*$/).test(format)) {
+          throw new Error('The warning format should be able to uniquely identify this ' + 'warning. Please, use a more descriptive format than: ' + format);
+        }
+        if (!condition) {
+          var argIndex = 0;
+          var message = 'Warning: ' + format.replace(/%s/g, function() {
+            return args[argIndex++];
+          });
+          if (typeof console !== 'undefined') {
+            console.error(message);
+          }
+          try {
+            throw new Error(message);
+          } catch (x) {}
+        }
+      };
+    }
+    module.exports = warning;
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:warning@2.1.0.js", ["npm:warning@2.1.0/browser.js"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:warning@2.1.0/browser.js');
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/deprecate.js", ["warning", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    function deprecate(fn, message) {
+      return function() {
+        "production" !== 'production' ? _warning2['default'](false, '[history] ' + message) : undefined;
+        return fn.apply(this, arguments);
+      };
+    }
+    exports['default'] = deprecate;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
+System.registerDynamic("npm:history@2.1.2/lib/createHistory.js", ["warning", "deep-equal", "./PathUtils", "./AsyncUtils", "./Actions", "./createLocation", "./runTransitionHook", "./deprecate", "process"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(process) {
+    'use strict';
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _deepEqual = $__require('deep-equal');
+    var _deepEqual2 = _interopRequireDefault(_deepEqual);
+    var _PathUtils = $__require('./PathUtils');
+    var _AsyncUtils = $__require('./AsyncUtils');
+    var _Actions = $__require('./Actions');
+    var _createLocation2 = $__require('./createLocation');
+    var _createLocation3 = _interopRequireDefault(_createLocation2);
+    var _runTransitionHook = $__require('./runTransitionHook');
+    var _runTransitionHook2 = _interopRequireDefault(_runTransitionHook);
+    var _deprecate = $__require('./deprecate');
+    var _deprecate2 = _interopRequireDefault(_deprecate);
+    function createRandomKey(length) {
+      return Math.random().toString(36).substr(2, length);
+    }
+    function locationsAreEqual(a, b) {
+      return a.pathname === b.pathname && a.search === b.search && a.key === b.key && _deepEqual2['default'](a.state, b.state);
+    }
+    var DefaultKeyLength = 6;
+    function createHistory() {
+      var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      var getCurrentLocation = options.getCurrentLocation;
+      var finishTransition = options.finishTransition;
+      var saveState = options.saveState;
+      var go = options.go;
+      var getUserConfirmation = options.getUserConfirmation;
+      var keyLength = options.keyLength;
+      if (typeof keyLength !== 'number')
+        keyLength = DefaultKeyLength;
+      var transitionHooks = [];
+      function listenBefore(hook) {
+        transitionHooks.push(hook);
+        return function() {
+          transitionHooks = transitionHooks.filter(function(item) {
+            return item !== hook;
+          });
+        };
+      }
+      var allKeys = [];
+      var changeListeners = [];
+      var location = undefined;
+      function getCurrent() {
+        if (pendingLocation && pendingLocation.action === _Actions.POP) {
+          return allKeys.indexOf(pendingLocation.key);
+        } else if (location) {
+          return allKeys.indexOf(location.key);
+        } else {
+          return -1;
+        }
+      }
+      function updateLocation(newLocation) {
+        var current = getCurrent();
+        location = newLocation;
+        if (location.action === _Actions.PUSH) {
+          allKeys = [].concat(allKeys.slice(0, current + 1), [location.key]);
+        } else if (location.action === _Actions.REPLACE) {
+          allKeys[current] = location.key;
+        }
+        changeListeners.forEach(function(listener) {
+          listener(location);
+        });
+      }
+      function listen(listener) {
+        changeListeners.push(listener);
+        if (location) {
+          listener(location);
+        } else {
+          var _location = getCurrentLocation();
+          allKeys = [_location.key];
+          updateLocation(_location);
+        }
+        return function() {
+          changeListeners = changeListeners.filter(function(item) {
+            return item !== listener;
+          });
+        };
+      }
+      function confirmTransitionTo(location, callback) {
+        _AsyncUtils.loopAsync(transitionHooks.length, function(index, next, done) {
+          _runTransitionHook2['default'](transitionHooks[index], location, function(result) {
+            if (result != null) {
+              done(result);
+            } else {
+              next();
+            }
+          });
+        }, function(message) {
+          if (getUserConfirmation && typeof message === 'string') {
+            getUserConfirmation(message, function(ok) {
+              callback(ok !== false);
+            });
+          } else {
+            callback(message !== false);
+          }
+        });
+      }
+      var pendingLocation = undefined;
+      function transitionTo(nextLocation) {
+        if (location && locationsAreEqual(location, nextLocation))
+          return;
+        pendingLocation = nextLocation;
+        confirmTransitionTo(nextLocation, function(ok) {
+          if (pendingLocation !== nextLocation)
+            return;
+          if (ok) {
+            if (nextLocation.action === _Actions.PUSH) {
+              var prevPath = createPath(location);
+              var nextPath = createPath(nextLocation);
+              if (nextPath === prevPath && _deepEqual2['default'](location.state, nextLocation.state))
+                nextLocation.action = _Actions.REPLACE;
+            }
+            if (finishTransition(nextLocation) !== false)
+              updateLocation(nextLocation);
+          } else if (location && nextLocation.action === _Actions.POP) {
+            var prevIndex = allKeys.indexOf(location.key);
+            var nextIndex = allKeys.indexOf(nextLocation.key);
+            if (prevIndex !== -1 && nextIndex !== -1)
+              go(prevIndex - nextIndex);
+          }
+        });
+      }
+      function push(location) {
+        transitionTo(createLocation(location, _Actions.PUSH, createKey()));
+      }
+      function replace(location) {
+        transitionTo(createLocation(location, _Actions.REPLACE, createKey()));
+      }
+      function goBack() {
+        go(-1);
+      }
+      function goForward() {
+        go(1);
+      }
+      function createKey() {
+        return createRandomKey(keyLength);
+      }
+      function createPath(location) {
+        if (location == null || typeof location === 'string')
+          return location;
+        var pathname = location.pathname;
+        var search = location.search;
+        var hash = location.hash;
+        var result = pathname;
+        if (search)
+          result += search;
+        if (hash)
+          result += hash;
+        return result;
+      }
+      function createHref(location) {
+        return createPath(location);
+      }
+      function createLocation(location, action) {
+        var key = arguments.length <= 2 || arguments[2] === undefined ? createKey() : arguments[2];
+        if (typeof action === 'object') {
+          "production" !== 'production' ? _warning2['default'](false, 'The state (2nd) argument to history.createLocation is deprecated; use a ' + 'location descriptor instead') : undefined;
+          if (typeof location === 'string')
+            location = _PathUtils.parsePath(location);
+          location = _extends({}, location, {state: action});
+          action = key;
+          key = arguments[3] || createKey();
+        }
+        return _createLocation3['default'](location, action, key);
+      }
+      function setState(state) {
+        if (location) {
+          updateLocationState(location, state);
+          updateLocation(location);
+        } else {
+          updateLocationState(getCurrentLocation(), state);
+        }
+      }
+      function updateLocationState(location, state) {
+        location.state = _extends({}, location.state, state);
+        saveState(location.key, location.state);
+      }
+      function registerTransitionHook(hook) {
+        if (transitionHooks.indexOf(hook) === -1)
+          transitionHooks.push(hook);
+      }
+      function unregisterTransitionHook(hook) {
+        transitionHooks = transitionHooks.filter(function(item) {
+          return item !== hook;
+        });
+      }
+      function pushState(state, path) {
+        if (typeof path === 'string')
+          path = _PathUtils.parsePath(path);
+        push(_extends({state: state}, path));
+      }
+      function replaceState(state, path) {
+        if (typeof path === 'string')
+          path = _PathUtils.parsePath(path);
+        replace(_extends({state: state}, path));
+      }
+      return {
+        listenBefore: listenBefore,
+        listen: listen,
+        transitionTo: transitionTo,
+        push: push,
+        replace: replace,
+        go: go,
+        goBack: goBack,
+        goForward: goForward,
+        createKey: createKey,
+        createPath: createPath,
+        createHref: createHref,
+        createLocation: createLocation,
+        setState: _deprecate2['default'](setState, 'setState is deprecated; use location.key to save state instead'),
+        registerTransitionHook: _deprecate2['default'](registerTransitionHook, 'registerTransitionHook is deprecated; use listenBefore instead'),
+        unregisterTransitionHook: _deprecate2['default'](unregisterTransitionHook, 'unregisterTransitionHook is deprecated; use the callback returned from listenBefore instead'),
+        pushState: _deprecate2['default'](pushState, 'pushState is deprecated; use push instead'),
+        replaceState: _deprecate2['default'](replaceState, 'replaceState is deprecated; use replace instead')
+      };
+    }
+    exports['default'] = createHistory;
+    module.exports = exports['default'];
+  })($__require('process'));
+  return module.exports;
+});
+
 System.registerDynamic("npm:process@0.11.3/browser.js", [], true, function($__require, exports, module) {
   ;
   var define,
@@ -12234,83 +16800,283 @@ System.registerDynamic("github:jspm/nodelibs-process@0.1.2.js", ["github:jspm/no
   return module.exports;
 });
 
-System.registerDynamic("npm:react@15.1.0/lib/React.js", ["object-assign", "./ReactChildren", "./ReactComponent", "./ReactClass", "./ReactDOMFactories", "./ReactElement", "./ReactElementValidator", "./ReactPropTypes", "./ReactVersion", "./onlyChild", "fbjs/lib/warning", "process"], true, function($__require, exports, module) {
+System.registerDynamic("npm:history@2.1.2/lib/createMemoryHistory.js", ["warning", "invariant", "./PathUtils", "./Actions", "./createHistory", "process"], true, function($__require, exports, module) {
   ;
   var define,
       global = this,
       GLOBAL = this;
   (function(process) {
     'use strict';
-    var _assign = $__require('object-assign');
-    var ReactChildren = $__require('./ReactChildren');
-    var ReactComponent = $__require('./ReactComponent');
-    var ReactClass = $__require('./ReactClass');
-    var ReactDOMFactories = $__require('./ReactDOMFactories');
-    var ReactElement = $__require('./ReactElement');
-    var ReactElementValidator = $__require('./ReactElementValidator');
-    var ReactPropTypes = $__require('./ReactPropTypes');
-    var ReactVersion = $__require('./ReactVersion');
-    var onlyChild = $__require('./onlyChild');
-    var warning = $__require('fbjs/lib/warning');
-    var createElement = ReactElement.createElement;
-    var createFactory = ReactElement.createFactory;
-    var cloneElement = ReactElement.cloneElement;
-    if ("production" !== 'production') {
-      createElement = ReactElementValidator.createElement;
-      createFactory = ReactElementValidator.createFactory;
-      cloneElement = ReactElementValidator.cloneElement;
-    }
-    var __spread = _assign;
-    if ("production" !== 'production') {
-      var warned = false;
-      __spread = function() {
-        "production" !== 'production' ? warning(warned, 'React.__spread is deprecated and should not be used. Use ' + 'Object.assign directly or another helper function with similar ' + 'semantics. You may be seeing this warning due to your compiler. ' + 'See https://fb.me/react-spread-deprecation for more details.') : void 0;
-        warned = true;
-        return _assign.apply(null, arguments);
-      };
-    }
-    var React = {
-      Children: {
-        map: ReactChildren.map,
-        forEach: ReactChildren.forEach,
-        count: ReactChildren.count,
-        toArray: ReactChildren.toArray,
-        only: onlyChild
-      },
-      Component: ReactComponent,
-      createElement: createElement,
-      cloneElement: cloneElement,
-      isValidElement: ReactElement.isValidElement,
-      PropTypes: ReactPropTypes,
-      createClass: ReactClass.createClass,
-      createFactory: createFactory,
-      createMixin: function(mixin) {
-        return mixin;
-      },
-      DOM: ReactDOMFactories,
-      version: ReactVersion,
-      __spread: __spread
+    exports.__esModule = true;
+    var _extends = Object.assign || function(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
     };
-    module.exports = React;
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : {'default': obj};
+    }
+    var _warning = $__require('warning');
+    var _warning2 = _interopRequireDefault(_warning);
+    var _invariant = $__require('invariant');
+    var _invariant2 = _interopRequireDefault(_invariant);
+    var _PathUtils = $__require('./PathUtils');
+    var _Actions = $__require('./Actions');
+    var _createHistory = $__require('./createHistory');
+    var _createHistory2 = _interopRequireDefault(_createHistory);
+    function createStateStorage(entries) {
+      return entries.filter(function(entry) {
+        return entry.state;
+      }).reduce(function(memo, entry) {
+        memo[entry.key] = entry.state;
+        return memo;
+      }, {});
+    }
+    function createMemoryHistory() {
+      var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      if (Array.isArray(options)) {
+        options = {entries: options};
+      } else if (typeof options === 'string') {
+        options = {entries: [options]};
+      }
+      var history = _createHistory2['default'](_extends({}, options, {
+        getCurrentLocation: getCurrentLocation,
+        finishTransition: finishTransition,
+        saveState: saveState,
+        go: go
+      }));
+      var _options = options;
+      var entries = _options.entries;
+      var current = _options.current;
+      if (typeof entries === 'string') {
+        entries = [entries];
+      } else if (!Array.isArray(entries)) {
+        entries = ['/'];
+      }
+      entries = entries.map(function(entry) {
+        var key = history.createKey();
+        if (typeof entry === 'string')
+          return {
+            pathname: entry,
+            key: key
+          };
+        if (typeof entry === 'object' && entry)
+          return _extends({}, entry, {key: key});
+        !false ? "production" !== 'production' ? _invariant2['default'](false, 'Unable to create history entry from %s', entry) : _invariant2['default'](false) : undefined;
+      });
+      if (current == null) {
+        current = entries.length - 1;
+      } else {
+        !(current >= 0 && current < entries.length) ? "production" !== 'production' ? _invariant2['default'](false, 'Current index must be >= 0 and < %s, was %s', entries.length, current) : _invariant2['default'](false) : undefined;
+      }
+      var storage = createStateStorage(entries);
+      function saveState(key, state) {
+        storage[key] = state;
+      }
+      function readState(key) {
+        return storage[key];
+      }
+      function getCurrentLocation() {
+        var entry = entries[current];
+        var basename = entry.basename;
+        var pathname = entry.pathname;
+        var search = entry.search;
+        var path = (basename || '') + pathname + (search || '');
+        var key = undefined,
+            state = undefined;
+        if (entry.key) {
+          key = entry.key;
+          state = readState(key);
+        } else {
+          key = history.createKey();
+          state = null;
+          entry.key = key;
+        }
+        var location = _PathUtils.parsePath(path);
+        return history.createLocation(_extends({}, location, {state: state}), undefined, key);
+      }
+      function canGo(n) {
+        var index = current + n;
+        return index >= 0 && index < entries.length;
+      }
+      function go(n) {
+        if (n) {
+          if (!canGo(n)) {
+            "production" !== 'production' ? _warning2['default'](false, 'Cannot go(%s) there is not enough history', n) : undefined;
+            return;
+          }
+          current += n;
+          var currentLocation = getCurrentLocation();
+          history.transitionTo(_extends({}, currentLocation, {action: _Actions.POP}));
+        }
+      }
+      function finishTransition(location) {
+        switch (location.action) {
+          case _Actions.PUSH:
+            current += 1;
+            if (current < entries.length)
+              entries.splice(current);
+            entries.push(location);
+            saveState(location.key, location.state);
+            break;
+          case _Actions.REPLACE:
+            entries[current] = location;
+            saveState(location.key, location.state);
+            break;
+        }
+      }
+      return history;
+    }
+    exports['default'] = createMemoryHistory;
+    module.exports = exports['default'];
   })($__require('process'));
   return module.exports;
 });
 
-System.registerDynamic("npm:react@15.1.0/react.js", ["./lib/React"], true, function($__require, exports, module) {
+System.registerDynamic("npm:react-router@2.4.1/lib/createMemoryHistory.js", ["history/lib/useQueries", "history/lib/useBasename", "history/lib/createMemoryHistory"], true, function($__require, exports, module) {
   "use strict";
   ;
   var define,
       global = this,
       GLOBAL = this;
-  module.exports = $__require('./lib/React');
+  exports.__esModule = true;
+  exports.default = createMemoryHistory;
+  var _useQueries = $__require('history/lib/useQueries');
+  var _useQueries2 = _interopRequireDefault(_useQueries);
+  var _useBasename = $__require('history/lib/useBasename');
+  var _useBasename2 = _interopRequireDefault(_useBasename);
+  var _createMemoryHistory = $__require('history/lib/createMemoryHistory');
+  var _createMemoryHistory2 = _interopRequireDefault(_createMemoryHistory);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  function createMemoryHistory(options) {
+    var memoryHistory = (0, _createMemoryHistory2.default)(options);
+    var createHistory = function createHistory() {
+      return memoryHistory;
+    };
+    var history = (0, _useQueries2.default)((0, _useBasename2.default)(createHistory))(options);
+    history.__v2_compatible__ = true;
+    return history;
+  }
+  module.exports = exports['default'];
   return module.exports;
 });
 
-System.registerDynamic("npm:react@15.1.0.js", ["npm:react@15.1.0/react.js"], true, function($__require, exports, module) {
+System.registerDynamic("npm:react-router@2.4.1/lib/index.js", ["./RouteUtils", "./PropTypes", "./PatternUtils", "./Router", "./Link", "./IndexLink", "./withRouter", "./IndexRedirect", "./IndexRoute", "./Redirect", "./Route", "./History", "./Lifecycle", "./RouteContext", "./useRoutes", "./RouterContext", "./RoutingContext", "./match", "./useRouterHistory", "./applyRouterMiddleware", "./browserHistory", "./hashHistory", "./createMemoryHistory"], true, function($__require, exports, module) {
+  "use strict";
   ;
   var define,
       global = this,
       GLOBAL = this;
-  module.exports = $__require('npm:react@15.1.0/react.js');
+  exports.__esModule = true;
+  exports.createMemoryHistory = exports.hashHistory = exports.browserHistory = exports.applyRouterMiddleware = exports.formatPattern = exports.useRouterHistory = exports.match = exports.routerShape = exports.locationShape = exports.PropTypes = exports.RoutingContext = exports.RouterContext = exports.createRoutes = exports.useRoutes = exports.RouteContext = exports.Lifecycle = exports.History = exports.Route = exports.Redirect = exports.IndexRoute = exports.IndexRedirect = exports.withRouter = exports.IndexLink = exports.Link = exports.Router = undefined;
+  var _RouteUtils = $__require('./RouteUtils');
+  Object.defineProperty(exports, 'createRoutes', {
+    enumerable: true,
+    get: function get() {
+      return _RouteUtils.createRoutes;
+    }
+  });
+  var _PropTypes2 = $__require('./PropTypes');
+  Object.defineProperty(exports, 'locationShape', {
+    enumerable: true,
+    get: function get() {
+      return _PropTypes2.locationShape;
+    }
+  });
+  Object.defineProperty(exports, 'routerShape', {
+    enumerable: true,
+    get: function get() {
+      return _PropTypes2.routerShape;
+    }
+  });
+  var _PatternUtils = $__require('./PatternUtils');
+  Object.defineProperty(exports, 'formatPattern', {
+    enumerable: true,
+    get: function get() {
+      return _PatternUtils.formatPattern;
+    }
+  });
+  var _Router2 = $__require('./Router');
+  var _Router3 = _interopRequireDefault(_Router2);
+  var _Link2 = $__require('./Link');
+  var _Link3 = _interopRequireDefault(_Link2);
+  var _IndexLink2 = $__require('./IndexLink');
+  var _IndexLink3 = _interopRequireDefault(_IndexLink2);
+  var _withRouter2 = $__require('./withRouter');
+  var _withRouter3 = _interopRequireDefault(_withRouter2);
+  var _IndexRedirect2 = $__require('./IndexRedirect');
+  var _IndexRedirect3 = _interopRequireDefault(_IndexRedirect2);
+  var _IndexRoute2 = $__require('./IndexRoute');
+  var _IndexRoute3 = _interopRequireDefault(_IndexRoute2);
+  var _Redirect2 = $__require('./Redirect');
+  var _Redirect3 = _interopRequireDefault(_Redirect2);
+  var _Route2 = $__require('./Route');
+  var _Route3 = _interopRequireDefault(_Route2);
+  var _History2 = $__require('./History');
+  var _History3 = _interopRequireDefault(_History2);
+  var _Lifecycle2 = $__require('./Lifecycle');
+  var _Lifecycle3 = _interopRequireDefault(_Lifecycle2);
+  var _RouteContext2 = $__require('./RouteContext');
+  var _RouteContext3 = _interopRequireDefault(_RouteContext2);
+  var _useRoutes2 = $__require('./useRoutes');
+  var _useRoutes3 = _interopRequireDefault(_useRoutes2);
+  var _RouterContext2 = $__require('./RouterContext');
+  var _RouterContext3 = _interopRequireDefault(_RouterContext2);
+  var _RoutingContext2 = $__require('./RoutingContext');
+  var _RoutingContext3 = _interopRequireDefault(_RoutingContext2);
+  var _PropTypes3 = _interopRequireDefault(_PropTypes2);
+  var _match2 = $__require('./match');
+  var _match3 = _interopRequireDefault(_match2);
+  var _useRouterHistory2 = $__require('./useRouterHistory');
+  var _useRouterHistory3 = _interopRequireDefault(_useRouterHistory2);
+  var _applyRouterMiddleware2 = $__require('./applyRouterMiddleware');
+  var _applyRouterMiddleware3 = _interopRequireDefault(_applyRouterMiddleware2);
+  var _browserHistory2 = $__require('./browserHistory');
+  var _browserHistory3 = _interopRequireDefault(_browserHistory2);
+  var _hashHistory2 = $__require('./hashHistory');
+  var _hashHistory3 = _interopRequireDefault(_hashHistory2);
+  var _createMemoryHistory2 = $__require('./createMemoryHistory');
+  var _createMemoryHistory3 = _interopRequireDefault(_createMemoryHistory2);
+  function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {default: obj};
+  }
+  exports.Router = _Router3.default;
+  exports.Link = _Link3.default;
+  exports.IndexLink = _IndexLink3.default;
+  exports.withRouter = _withRouter3.default;
+  exports.IndexRedirect = _IndexRedirect3.default;
+  exports.IndexRoute = _IndexRoute3.default;
+  exports.Redirect = _Redirect3.default;
+  exports.Route = _Route3.default;
+  exports.History = _History3.default;
+  exports.Lifecycle = _Lifecycle3.default;
+  exports.RouteContext = _RouteContext3.default;
+  exports.useRoutes = _useRoutes3.default;
+  exports.RouterContext = _RouterContext3.default;
+  exports.RoutingContext = _RoutingContext3.default;
+  exports.PropTypes = _PropTypes3.default;
+  exports.match = _match3.default;
+  exports.useRouterHistory = _useRouterHistory3.default;
+  exports.applyRouterMiddleware = _applyRouterMiddleware3.default;
+  exports.browserHistory = _browserHistory3.default;
+  exports.hashHistory = _hashHistory3.default;
+  exports.createMemoryHistory = _createMemoryHistory3.default;
+  return module.exports;
+});
+
+System.registerDynamic("npm:react-router@2.4.1.js", ["npm:react-router@2.4.1/lib/index"], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  module.exports = $__require('npm:react-router@2.4.1/lib/index');
   return module.exports;
 });

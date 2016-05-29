@@ -4,17 +4,13 @@
     <link rel="stylesheet" href="assets/css/font-awesome.css">
   </head>
   <body>
-      <div id="container">Loading...</div>
-      <div id="container2">Loading...</div>
+      <div id="container"></div>
     <script src="jspm_packages/system.js"></script>
     <script src="systemjs.config.js"></script>
-    <!--<script src="dependencies-t.js"></script>-->
-    <!--<script src="application.js"></script>-->
+    <script src="dependencies.js"></script>
+    <script src="application.js"></script>
     <script>
-      // System.import('Application').catch(function(err){ console.error(err);  });
       System.import('application/Application').catch(function(err){ console.error(err);  });
     </script>
   </body>
-
-
 </html>

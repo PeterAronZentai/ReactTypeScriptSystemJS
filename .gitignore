@@ -2,3 +2,6 @@ node_modules
 jspm_packages
 application
 server
+application.js
+server.js
+

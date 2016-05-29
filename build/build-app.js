@@ -6,7 +6,7 @@ var Builder = require('systemjs-builder');
 var builder = new Builder('./', 'systemjs.config.js');
 
 builder
-.bundle('[application/**/*.js]', 'application-t.js')
+.bundle('[application/**/*.js]', 'application.js')
 .then(function() {
   console.log('Build complete');
 })

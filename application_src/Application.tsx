@@ -2,24 +2,49 @@
 import * as React from 'react'
 import { Component, ComponentLifecycle, ReactPropTypes, ValidationMap } from 'react'
 import { render as domRender } from 'react-dom'
-import { TermDisplay, TermList } from './components/TermDisplay'
+import { TermDisplay, TermList } from './TermDisplay'
 import { getTaxonomyStore, getTermStore, TaxonomyStore } from './Store'
-import { Taxonomy } from './entities/Taxonomy'
-import { Term } from './entities/Term'
-import { Router, Route, Link, hashHistory, IndexRoute, RouteComponentProps } from 'react-router'
+import { Taxonomy, Term } from './Taxonomy'
+import { Router, Route, Link, hashHistory, IndexRoute, RouteComponentProps, Redirect } from 'react-router'
 
+
+interface HashOf<T> { [key:string]: T}
 
 
 export class NavLink extends Component<any, any> {
   render() {
-    return <Link {...this.props} activeClassName="active"/>
+    return <Link {...this.props} activeClassName="active" />
   }
 }
 
-const NavMenu = ({}) => <ul>
-<li><NavLink to="/GB">GB Taxonomy</NavLink> </li>
-<li><NavLink to="/US">US Taxonomy</NavLink></li>
+const NavMenu = ({}) =>
+<ul className="menu taxonomy-menu">
+  <li className="menu-head">category >></li>
+  <li><NavLink to="/subjects" >Subject</NavLink> </li>
+  <li><NavLink to="/ages">Age</NavLink></li>
+  <li><NavLink to="/attachment-types">Attachment</NavLink></li>
 </ul>
+
+const CountryMenu = ({ parent }) =>
+<ul className="menu country-menu">
+  <li className="menu-head">region >></li>
+  <li><NavLink to={`${parent}/GB`}>United Kingdom</NavLink> </li>
+  <li><NavLink to={`${parent}/US`}>United States</NavLink></li>
+  <li><NavLink to={`${parent}/AU`}>Australia</NavLink></li>
+  <li><NavLink to={`${parent}/Common`}>Common</NavLink></li>
+</ul>
+
+const TaxonomyViewTemplate = ({ terms, country, taxonomy}) =>
+<div>
+  <div className="menu-bar">
+    <NavMenu />
+    <CountryMenu parent={taxonomy.name} />
+  </div>
+  <div className="workspace">
+    <TermList terms={terms} showHeader={true}  country={country}/>
+  </div>
+</div>
+
 
 export class Home extends Component<{taxonomyStore:any}, any> {
   render() {
@@ -30,106 +55,67 @@ export class Home extends Component<{taxonomyStore:any}, any> {
   }
 }
 
+export type TaxonomySpecification = {taxonomy:string, country?: string}
 
-export type TaxonomyRegionContext = {taxonomyStore: TaxonomyStore}
-
-export type TaxonomyDisplayProps = RouteComponentProps<{taxonomy:string, country: string},
-                                                       {taxonomy: string}>;
+export type TaxonomyViewProps = RouteComponentProps<TaxonomySpecification, TaxonomySpecification>;
 
 
-export class TaxonomyDisplay extends Component<TaxonomyDisplayProps, any> {
+export class TaxonomyView extends Component<TaxonomyViewProps, any>
+                             implements ComponentLifecycle<TaxonomyViewProps, any> {
 
   private handleStoreUpdate = () => {
-    this.forceUpdate()
+    setTimeout( () =>this.forceUpdate(), 0);
   }
 
+  private subscriptions: HashOf<{() : any}> = { }
+
+  componentWillReceiveProps(nextProps: TaxonomyViewProps, nextContext) {
+    if (nextProps.routeParams.taxonomy !== this.props.routeParams.taxonomy) {
+      this.subscribeToStore(nextProps.routeParams.taxonomy)
+    }
+  }
+
+  subscribeToStore(taxonomyName) {
+    const taxonomyStore = getTaxonomyStore(taxonomyName)
+    this.subscriptions[taxonomyName] = this.subscriptions[taxonomyName] || taxonomyStore.on("changed", () => this.handleStoreUpdate())
+    taxonomyStore.load()
+  }
 
   componentDidMount() {
-    console.log("@@@TD mount", this.props.params.country)
-    getTaxonomyStore(this.props.params.taxonomy).on("changed", () => this.handleStoreUpdate())
-    getTaxonomyStore(this.props.params.taxonomy).load()
+    this.subscribeToStore(this.props.params.taxonomy)
   }
 
-  static childContextTypes: ValidationMap<TaxonomyRegionContext> = {
-    taxonomyStore: React.PropTypes.object.isRequired
+  get taxonomyStore() {
+    return getTaxonomyStore(this.props.params.taxonomy)
   }
 
-  getChildContext() {
-    const childContext = {
-      taxonomyStore : getTaxonomyStore(this.props.params.taxonomy)
-    }
-    return childContext
-  }
 
   render() {
-    return <div>
-      <div>TD</div>
-      <div>{this.props.children}</div>
-    </div>
-  }
-
-}
-
-type TaxonomyRegionProps = RouteComponentProps<{taxonomy:string, country: string}, {taxonomy:string, country: string}>
-
-
-export class TaxonomyRegion extends Component<TaxonomyRegionProps, any> {
-
-  static contextTypes: ValidationMap<TaxonomyRegionContext> = {
-    taxonomyStore: React.PropTypes.object.isRequired
-  }
-
-  context: TaxonomyRegionContext
-
-  render() {
-    const taxonomy = this.context.taxonomyStore.data
-    const terms = taxonomy.getRootTerms(this.props.params.country)
-    return <div>
-      <div>TR</div>
-      <div>
-        <TermList terms={terms} showHeader={true} />
-      </div>
-    </div>
+    const country = this.props.params.country
+    const taxonomy = this.taxonomyStore.data
+    const terms = country && taxonomy && taxonomy.getRootTerms(country) || []
+    const viewProps = { country, taxonomy,  terms}
+    return <TaxonomyViewTemplate {...viewProps}/>
   }
 }
 
 export class Application extends Component<any, any> {
-  click() {
-    console.log(this)
-  }
-
-  constructor(props, context) {
-    super(props, context)
-    console.log("@@@", context, this.context, this.state)
-    //this.context
-  }
-
-
-  async componentDidMount() {
-
-  }
-
-
-  static contextTypes: ValidationMap<any> = {
-    router: React.PropTypes.object.isRequired
-  };
-
   render() {
     return <div>
-            <NavMenu />
             {this.props.children}
           </div>
-
   }
 }
 
-
 domRender((
   <Router history={hashHistory}>
-    <Route path="/" >
+    <Redirect from="/" to="/subjects/GB" />
+    <Route path="/" component={Application}>
       <IndexRoute component={Home} />
-      <Route path="/:taxonomy" component={TaxonomyDisplay}>
-        <Route path="/:taxonomy/:country" component={TaxonomyRegion} />
+      <Redirect from="/:taxonomy" to="/:taxonomy/GB" />
+      <Route path="/:taxonomy">
+        <Route path="/:taxonomy/:country" component={TaxonomyView}>
+        </Route>
       </Route>
     </Route>
   </Router>

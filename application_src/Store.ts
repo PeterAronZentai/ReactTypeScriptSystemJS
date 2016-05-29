@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events'
-import { Term } from './entities/Term'
-import { Taxonomy } from './entities/Taxonomy'
+import { Taxonomy, Term } from './Taxonomy'
 
 export abstract class Store<T>  {
 
@@ -19,7 +18,6 @@ export abstract class Store<T>  {
 
   set data(v: T) {
     this._data = v
-    console.log("store changed", this, v)
     this.emitter.emit("changed")
   }
 
@@ -33,8 +31,11 @@ export abstract class Store<T>  {
     this.data = await this.loadInternal()
   }
 
+  fireChange() {
+    this.emitter.emit("changed")
+  }
+
   on(event:string, cb: () => any) {
-    console.log("subscribing listener", this, cb.toString())
     this.emitter.on(event, cb)
     return cb
   }
@@ -102,7 +103,6 @@ export class TaxonomyStore extends Store<Taxonomy> {
   }
 
   private mapTermName(s:string) {
-    console.log("namemap", s, this.termCountIdNameMap)
     return this.termCountIdNameMap[s]
   }
   async loadUsageCount(term:Term) {
