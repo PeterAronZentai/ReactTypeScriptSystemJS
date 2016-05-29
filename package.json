@@ -6,7 +6,7 @@
   "scripts": {
     "build-client": "./node_modules/.bin/tsc -p application_src -outDir application && node build/build-app.js && node build/build-deps.js",
     "build-server": "./node_modules/.bin/tsc -p server_src -outDir server",
-    "dev-server":"./node_modules/.bin/lite-server",
+    "dev-server": "./node_modules/.bin/lite-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -18,10 +18,10 @@
   "devDependencies": {
     "jspm": "^0.16.35",
     "systemjs-builder": "^0.15.18",
-    "express":"latest",
-    "lite-server":"latest",
-    "typescript":"latest",
-    "typeing":"latest"
+    "express": "latest",
+    "lite-server": "latest",
+    "typescript": "latest",
+    "typings": "latest"
   },
   "jspm": {
     "dependencies": {

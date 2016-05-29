@@ -3,7 +3,7 @@ var Builder = require('systemjs-builder');
 
 // optional constructor options
 // sets the baseURL and loads the configuration file
-var builder = new Builder('./', 'systemjs.config.js');
+var builder = new Builder('./', 'config.js');
 
 builder
 .bundle('[application/**/*.js]', 'application.js')
