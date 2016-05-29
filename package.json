@@ -4,9 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "postinstall": "node_modules/.bin/jspm install && npm run build",
+    "build": "npm run build-client && npm run build-server",
     "build-client": "./node_modules/.bin/tsc -p application_src -outDir application && node build/build-app.js && node build/build-deps.js",
     "build-server": "./node_modules/.bin/tsc -p server_src -outDir server",
     "dev-server": "./node_modules/.bin/lite-server",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
